@@ -47,7 +47,7 @@ input:focus,select:focus{border-color:var(--c1);box-shadow:0 0 12px rgba(0,229,2
 .ctl{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:1000px;gap:10px}
 #joy{width:130px;height:130px;border-radius:50%;background:var(--g);border:2px solid rgba(255,255,255,.2);position:relative;touch-action:none;display:none}
 #knob{position:absolute;left:44px;top:44px;width:42px;height:42px;border-radius:50%;background:var(--c1);box-shadow:0 0 16px var(--c1)}
-@media(pointer:coarse){#joy{display:block}.hint{display:none}}
+@media(pointer:coarse){.hint{display:none}}
 .btns{display:flex;gap:8px;margin-left:auto}.btns button{width:76px;height:76px;border-radius:50%;border:2px solid #fff3;background:var(--g);color:#fff;font:800 12px inherit;cursor:pointer;touch-action:none}
 .btns button:active{background:var(--c1);color:#000}.btns button[hidden]{display:none}
 .hint{font-size:12px;color:#7f93b8}
@@ -94,10 +94,26 @@ h1{font-size:clamp(44px,10vw,92px);letter-spacing:3px}
 .ctl{position:absolute;left:0;right:0;bottom:0;max-width:none;padding:0 16px calc(14px + env(safe-area-inset-bottom));pointer-events:none;z-index:8}.ctl>*{pointer-events:auto}
 .hint{position:absolute;bottom:8px;left:0;right:0;text-align:center;z-index:5;pointer-events:none}
 @media(pointer:coarse){.ctl{position:absolute}.board{height:auto}}
+
+/* ===== mobile / burger / map toggle / floating joystick ===== */
+body.ingame{overflow:hidden}body.ingame #sndb{display:none}body.ingame #toasts{top:calc(70px + env(safe-area-inset-top))}
+#game{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;--mmw:clamp(110px,30vw,180px)}
+.scr{min-height:100dvh}.ov .card{max-height:88dvh;overflow:auto}
+.hud>.hr{background:none;border:0;backdrop-filter:none;padding:0;position:relative}
+#bg{font-size:22px;line-height:1;padding:8px 13px;background:rgba(8,12,30,.6);backdrop-filter:blur(10px)}
+#opts{display:none;position:absolute;right:0;top:calc(100% + 8px);flex-direction:column;gap:6px;min-width:190px;padding:10px;background:rgba(8,12,30,.92);border:1px solid #fff3;border-radius:16px;pointer-events:auto;z-index:9}
+#opts.open{display:flex}#opts button{display:flex;justify-content:space-between;align-items:center;gap:14px;width:100%;text-align:left}
+#mapst{color:var(--c1)}body.nomap #mapst{color:#ff9a9a}
+#mm{top:calc(64px + env(safe-area-inset-top));right:10px;width:var(--mmw);border-radius:12px;box-shadow:0 0 16px #0008}
+.tip{top:calc(64px + env(safe-area-inset-top));max-width:calc(100% - var(--mmw) - 30px)}body.nomap .tip{max-width:calc(100% - 20px)}
+#joy{position:fixed;pointer-events:none;z-index:7;background:rgba(10,16,40,.35);backdrop-filter:blur(4px)}
+@media(hover:hover) and (pointer:fine){#game{--mmw:clamp(150px,16vw,240px)}#bg{display:none}#opts,#opts.open{display:flex;position:static;flex-direction:row;min-width:0;padding:0;background:none;border:0}#opts button{width:auto}#opts .lb{display:none}}
+@media(max-width:600px){.scr{padding:12px}.card{padding:14px;border-radius:18px}.btn{padding:12px 18px;font-size:16px}.tbl{font-size:11px;grid-template-columns:1.6fr 1fr .8fr 1fr .8fr}.code{font-size:30px}.chip{min-width:0;font-size:12px;padding:5px 10px}#tm{font-size:26px}.mid small{font-size:10px}.btns button{width:74px;height:74px}}
+@media(max-height:480px){#tm{font-size:22px}.mid small{display:none}.btns button{width:62px;height:62px;font-size:11px}#game{--mmw:clamp(100px,22vw,150px)}}
 </style></head>
 <body>
 <div id="toasts"></div>
-<button class="ico" data-act="snd" id="sndb" style="position:fixed;right:12px;top:12px;z-index:30">🔊</button>
+<button class="ico snd-i" data-act="snd" id="sndb" style="position:fixed;right:12px;top:12px;z-index:30">🔊</button>
 
 <section class="scr on" id="landing">
 <svg class="logo" width="120" height="120" viewBox="0 0 120 120"><circle cx="50" cy="50" r="34" fill="none" stroke="#00e5ff" stroke-width="9"/><path d="M75 75L108 108" stroke="#ff4d6d" stroke-width="12" stroke-linecap="round"/><circle cx="42" cy="46" r="6" fill="#fff"/><circle cx="58" cy="46" r="6" fill="#fff"/><circle cx="43" cy="47" r="3" fill="#111"/><circle cx="59" cy="47" r="3" fill="#111"/></svg>
@@ -123,7 +139,11 @@ h1{font-size:clamp(44px,10vw,92px);letter-spacing:3px}
 <div class="row"><button class="btn alt" data-act="ready" id="rdy">Ready</button><button class="btn" data-act="start" id="st">Start game</button><button class="ghost" data-act="leave">Leave</button></div></div></section>
 
 <section class="scr" id="game">
-<div class="hud"><div id="rl" class="chip"></div><div class="mid"><small id="ph"></small><b id="tm">00:00</b></div><div><button class="ico" data-act="sb">🏆</button> <button class="ico" data-act="pause">⏸</button></div></div>
+<div class="hud"><div id="rl" class="chip"></div><div class="mid"><small id="ph"></small><b id="tm">00:00</b></div><div class="hr"><button class="ico" id="bg" data-act="menu" aria-label="Menu">☰</button><div id="opts">
+<button class="ico" data-act="map"><span>🗺️ <span class="lb">Map</span></span><b id="mapst">ON</b></button>
+<button class="ico" data-act="sb"><span>🏆 <span class="lb">Scoreboard</span></span></button>
+<button class="ico" data-act="pause"><span>⏸ <span class="lb">Pause</span></span></button>
+<button class="ico" data-act="snd"><span><span class="snd-i">🔊</span> <span class="lb">Sound</span></span></button></div></div></div>
 <div class="board"><canvas id="bd"></canvas><div id="vig"></div><svg id="mm" viewBox="0 0 1000 700"><g id="mmb"></g><g id="mmd"></g></svg><div id="tip" class="tip"></div>
 <div id="blind" class="ov"><div>EYES CLOSED 🙈<small>Hiders are hiding… you move when the timer hits zero.</small></div></div>
 <div id="spec" class="ov" style="background:rgba(60,5,20,.55);justify-content:flex-start;padding-top:20px;pointer-events:none"><div>YOU'VE BEEN CAPTURED<small>Spectating — watch the round play out.</small></div></div></div>
@@ -170,7 +190,7 @@ function sfx(t){if(!snd)return;try{AC=AC||new(window.AudioContext||webkitAudioCo
 
 // ===================== UI helpers =====================
 function toast(m,type=''){const e=document.createElement('div');e.className='t '+type;e.textContent=m;$('toasts').appendChild(e);setTimeout(()=>e.remove(),3200)}
-function show(id){document.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on',s.id===id));cur=id}
+function show(id){document.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on',s.id===id));cur=id;document.body.classList.toggle('ingame',id==='game')}
 
 // ===================== Character System =====================
 const CH=[['Ninja','#ff4d6d','<path d="M14 24h36v8H14z" fill="#111"/><rect x="40" y="26" width="14" height="4" fill="#ff4d6d"/>'],
@@ -367,7 +387,7 @@ function beginRound(){
  update(ref(db,`rooms/${code}/players/${uid}`),{x:me.x,y:me.y,hidden:false});
  pos={};ids().forEach(i=>pos[i]={x:players[i].x??500,y:players[i].y??350});pos[uid]=me;
  clearTk();tk={};show('game');closeOverlays();
- const LK=game.mode==='lock';roleBanner(sk);
+ const LK=game.mode==='lock';roleBanner(sk);if(touch&&!window._told){window._told=1;toast('Touch & drag anywhere to move')}
  $('blind').innerHTML=LK?'<div>FROZEN ⏳<small>Runners get a head start. You move when the timer hits zero.</small></div>':'<div>EYES CLOSED 🙈<small>Hiders are hiding… you move when the timer hits zero.</small></div>';
  $('spec').innerHTML=`<div>${LK?'YOU ARE OUT ❌':"YOU'VE BEEN CAPTURED"}<small>Spectating — watch the round play out.</small></div>`;
  $('bc').hidden=true;$('bs').hidden=!sk||LK;$('bh').hidden=sk||LK;
@@ -441,7 +461,7 @@ function frame(ts){
  const s=ts/1000;zoneA.forEach(z=>{const p=1+Math.sin(s*2+z.ph)*.05;z.ring.scale.set(p,p,1);z.sp.position.y=60+Math.sin(s*2.2+z.ph)*4;z.beam.material.opacity=.12+Math.sin(s*2+z.ph)*.04});
  $('vig').classList.toggle('on',iAm&&ph==='seek'&&!LK); // seeker's limited view
  stepFx(dt);R.render(scene,camera);
- if(ts-mmT>120){mmT=ts;$('mmd').innerHTML=vis.map(([i,x,y,s])=>`<circle cx="${x|0}" cy="${y|0}" r="${i===uid?20:15}" fill="${s?'#ff4d6d':i===uid?'#00e5ff':'#ffd24d'}"/>`).join('')}
+ if(mapOn&&ts-mmT>120){mmT=ts;$('mmd').innerHTML=vis.map(([i,x,y,s])=>`<circle cx="${x|0}" cy="${y|0}" r="${i===uid?30:22}" stroke="#fff" stroke-width="${i===uid?7:0}" fill="${s?'#ff4d6d':i===uid?'#00e5ff':'#ffd24d'}"/>`).join('')}
  const near=LK?(!iAm&&!dead&&!lockedMe&&ph==='seek'&&list.some(i=>i!==uid&&st[i]==='L1'&&cap[i]==null&&dist(me,pos[i])<=K.key)):(!hidden&&!iAm&&!dead&&zones.some(z=>dist(me,z)<=z.r));$('bh').classList.toggle('glow',near);
  const tip=dead?'':LK?(lockedMe?'🔒 You are locked! Wait for a runner to free you.':iAm?(ph==='seek'?'Touch a runner to lock them. Touch a freed runner again to knock them out!':''):near?'Stay close to your locked friend — the key frees them automatically!':ph==='hide'?'Head start! Run away from the catcher!':st[uid]==='F1'?'Careful: one more catch and you are out!':''):iAm?(ph==='seek'?'Fog limits your view. Moving hiders are revealed for 2s. Get close to catch them!':''):hidden?'Safe! The seeker cannot see you. Press E / EXIT to leave.':near?'Hiding spot! Press E or tap HIDE.':ph==='seek'&&l>.05?'⚠️ The seeker can see you while you move!':ph==='hide'?'Run to a glowing hiding spot!':'';
  if(tip!==lastTip){lastTip=tip;$('tip').textContent=tip;$('tip').style.opacity=tip?1:0}
@@ -501,11 +521,13 @@ function showResult(){
  $('rb').innerHTML=(isHost()?'<button class="btn" data-act="start">Play again</button><button class="btn alt" data-act="tolobby">Return to lobby</button>':'<small>Waiting for the host…</small>')+'<button class="ghost" data-act="leave">Leave room</button>'}
 
 // ===================== Input & Event Delegation =====================
-document.addEventListener('click',async e=>{
+document.addEventListener('click',async e=>{if(!e.target.closest('.hr'))$('opts').classList.remove('open');
  const c=e.target.closest('[data-ch]');if(c){const i=+c.dataset.ch;if(!(i>=0&&i<CH.length))return;sfx('click');
   if(c.parentNode.id==='lcg'&&code)update(ref(db,`rooms/${code}/players/${uid}`),{ch:i});else{selCh=i;hlChars()}return}
  const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;if(a!=='snd')sfx('click');
  if(a==='go'){mode=b.dataset.v;$('tc').classList.toggle('on',mode==='create');$('tj').classList.toggle('on',mode==='join');$('jc').style.display=mode==='join'?'':'none';$('cs').style.display=mode==='create'?'':'none';$('go').textContent=mode==='create'?'Create room':'Join room';show('setup');hlChars()}
+ else if(a==='menu')$('opts').classList.toggle('open');
+ else if(a==='map')setMap(!mapOn);
  else if(a==='home')show('landing');
  else if(a==='submit'){b.disabled=true;await submit();b.disabled=false}
  else if(a==='copy'){navigator.clipboard?.writeText(code);toast('Code copied: '+code)}
@@ -514,27 +536,32 @@ document.addEventListener('click',async e=>{
  else if(a==='start')startRound();
  else if(a==='tolobby'&&isHost()){await update(ref(db,`rooms/${code}`),{status:'lobby'})}
  else if(a==='leave'){$('pm').hidden=true;leaveRoom()}
- else if(a==='sb'){$('sbo').hidden=!$('sbo').hidden;$('sbo').classList.toggle('show',!$('sbo').hidden);renderSB()}
- else if(a==='pause'){$('pm').hidden=!$('pm').hidden;$('pm').classList.toggle('show',!$('pm').hidden)}
- else if(a==='snd'){snd=!snd;$('sndb').textContent=snd?'🔊':'🔇'}
+ else if(a==='sb'){$('opts').classList.remove('open');$('sbo').hidden=!$('sbo').hidden;$('sbo').classList.toggle('show',!$('sbo').hidden);renderSB()}
+ else if(a==='pause'){$('opts').classList.remove('open');$('pm').hidden=!$('pm').hidden;$('pm').classList.toggle('show',!$('pm').hidden)}
+ else if(a==='snd'){snd=!snd;document.querySelectorAll('.snd-i').forEach(x=>x.textContent=snd?'🔊':'🔇')}
 });
 document.addEventListener('change',e=>{const k=e.target.dataset?.k;if(k&&e.target.closest('#ls'))setSetting(k,['diff','mode'].includes(k)?e.target.value:+e.target.value)});
 document.addEventListener('keydown',e=>{if(/input|select/i.test(e.target.tagName))return;const k=e.key.toLowerCase();keys[k]=true;
- if(k==='e')act('hide');if(k==='q')act('scan');if(k===' '){e.preventDefault();act('catch')}
+ if(k==='e')act('hide');if(k==='m')setMap(!mapOn);if(k==='q')act('scan');if(k===' '){e.preventDefault();act('catch')}
  if(k==='escape'&&cur==='game')document.querySelector('[data-act=pause]').click();if(k.startsWith('arrow'))e.preventDefault()});
 document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 window.addEventListener('blur',()=>keys={});
 document.querySelectorAll('[data-a]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();act(b.dataset.a)}));
-// Virtual joystick
-const jEl=$('joy'),kn=$('knob');let jp=null;
-function jm(e){const r=jEl.getBoundingClientRect();let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;const m=r.width/2,l=Math.hypot(x,y);if(l>m){x*=m/l;y*=m/l}joy.x=x/m;joy.y=y/m;kn.style.transform=`translate(${x}px,${y}px)`}
-jEl.addEventListener('pointerdown',e=>{jp=e.pointerId;jEl.setPointerCapture(jp);jm(e)});
-jEl.addEventListener('pointermove',e=>{if(e.pointerId===jp)jm(e)});
-['pointerup','pointercancel'].forEach(n=>jEl.addEventListener(n,e=>{if(e.pointerId===jp){jp=null;joy.x=joy.y=0;kn.style.transform=''}}));
+// Floating joystick: touch & drag anywhere on the game view
+const jEl=$('joy'),kn=$('knob'),cvEl=$('bd');let jp=null,jc={x:0,y:0};
+function jm(e){let x=e.clientX-jc.x,y=e.clientY-jc.y;const m=55,l=Math.hypot(x,y);if(l>m){x*=m/l;y*=m/l}joy.x=x/m;joy.y=y/m;kn.style.transform=`translate(${x}px,${y}px)`}
+function jEnd(e){if(e.pointerId!==jp)return;jp=null;joy.x=joy.y=0;jEl.style.display='none';kn.style.transform=''}
+cvEl.addEventListener('pointerdown',e=>{$('opts').classList.remove('open');if(e.pointerType!=='touch'||jp!==null)return;e.preventDefault();jp=e.pointerId;jc={x:e.clientX,y:e.clientY};jEl.style.display='block';jEl.style.left=(jc.x-65)+'px';jEl.style.top=(jc.y-65)+'px';try{cvEl.setPointerCapture(jp)}catch(_){}jm(e)});
+cvEl.addEventListener('pointermove',e=>{if(e.pointerId===jp)jm(e)});
+['pointerup','pointercancel','lostpointercapture'].forEach(n=>cvEl.addEventListener(n,jEnd));
+cvEl.addEventListener('contextmenu',e=>e.preventDefault());
+// Minimap toggle (saved on this device)
+let mapOn=true;
+function setMap(v){mapOn=v;$('mm').style.display=v?'':'none';document.body.classList.toggle('nomap',!v);$('mapst').textContent=v?'ON':'OFF';try{localStorage.setItem('hs_map',v?1:0)}catch(_){}}
 $('rcode').addEventListener('input',e=>e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''));
 
 // ===================== Boot =====================
-buildGrids();$('cs').innerHTML=sgHTML(S0,false);
+buildGrids();$('cs').innerHTML=sgHTML(S0,false);try{setMap(localStorage.getItem('hs_map')!=='0')}catch(_){setMap(true)}
 $('lrow').innerHTML=CH.slice(0,8).map((c,i)=>`<span class="lc" style="animation-delay:${i*.15}s">${chSvg(i,54)}</span>`).join('');
 new ResizeObserver(resize).observe($('bd'));addEventListener('resize',resize);resize();
 $('bd').addEventListener('wheel',e=>{e.preventDefault();zoom=Math.min(1.5,Math.max(.7,zoom+e.deltaY*.0008))},{passive:false});
