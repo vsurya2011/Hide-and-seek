@@ -158,16 +158,15 @@ body.ingame{overflow:hidden}body.ingame #sndb{display:none}body.ingame #toasts{t
 
 <script type="module">
 // ===================== Firebase Setup =====================
-// >>> REPLACE THIS WITH YOUR OWN FIREBASE WEB APP CONFIG <<<
 const firebaseConfig = {
-  apiKey: "AIzaSyAynTzAOEvTrL6NtR5mDCwsSc8USZ9Kdp0",
-  authDomain: "hide-and-seek-e1363.firebaseapp.com",
-  databaseURL: "https://hide-and-seek-e1363-default-rtdb.firebaseio.com",
-  projectId: "hide-and-seek-e1363",
-  storageBucket: "hide-and-seek-e1363.firebasestorage.app",
-  messagingSenderId: "526696547537",
-  appId: "1:526696547537:web:94f8774c13b67b3506b1f0",
-  measurementId: "G-TN1LQKQ9EV"
+  apiKey: "AIzaSyC0zPsKqXHPidva_KA5AZxjD1d8S3GQ41w",
+  authDomain: "hide-and-lock-c24d3.firebaseapp.com",
+  databaseURL: "https://hide-and-lock-c24d3-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "hide-and-lock-c24d3",
+  storageBucket: "hide-and-lock-c24d3.firebasestorage.app",
+  messagingSenderId: "412372034652",
+  appId: "1:412372034652:web:ebbcdd133276d2b6767299",
+  measurementId: "G-5EB2KQMKXZ"
 };
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInAnonymously,setPersistence,browserSessionPersistence} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -286,7 +285,7 @@ async function submit(){
 function on(path,cb){unsubs.push(onValue(ref(db,`rooms/${code}/${path}`),s=>cb(s.val())))}
 function enter(c){
  code=c;players={};pos={};game={};status='lobby';localRound=0;sKey='';tk={};
- const base=`rooms/${c}/`,pr=ref(db,base+'players'),put=s=>{const v=s.val(),o=players[s.key];if(o&&s.key!==uid){if(o.x!==v.x||o.y!==v.y)lastMove[s.key]=Date.now();if(o.hidden&&!v.hidden&&game.phase==='seek'&&uid===game.seekerId){lastMove[s.key]=Date.now();toast('👀 A hider left their hiding spot!','warn');sfx('scan');burst(v.x,v.y,'#ffb347')}}players[s.key]=v;if(!pos[s.key])pos[s.key]={x:v.x??500,y:v.y??350};dirty()};
+ const base=`rooms/${c}/`,pr=ref(db,base+'players'),put=s=>{const v=s.val(),o=players[s.key];if(o&&s.key!==uid){if(o.x!==v.x||o.y!==v.y)lastMove[s.key]=Date.now();if(o.hidden&&!v.hidden&&game.phase==='seek'&&uid===game.seekerId){lastMove[s.key]=Date.now();toast('👀 A hider left their hiding spot!','warn');sfx('scan');burst(v.x,v.y,'#ffb347')}}players[s.key]=v;if(s.key!==uid)rx[s.key]={x:v.x??500,y:v.y??350,vx:v.vx||0,vy:v.vy||0,t:v.pt||0};if(!pos[s.key])pos[s.key]={x:v.x??500,y:v.y??350};dirty()};
  on('hostId',v=>{hostId=v;sync();renderLobby()});
  on('status',v=>{if(v==null){if(code){toast('Room was closed','warn');leaveRoom()}return}status=v;sync()});
  on('settings',v=>{settings=v||S0;renderSettings()});
@@ -325,9 +324,7 @@ function renderLobby(){if(cur!=='lobby'||!code)return;$('rc').textContent=code;
 async function startRound(){
  if(!isHost())return;const on=ids().filter(i=>players[i].online);if(on.length<2)return toast('Need at least 2 players','err');
  const seeks=game.seeks||{},pool=on.length>2?on.filter(i=>i!==game.seekerId):on,sk=pool[Math.random()*pool.length|0],t=now();
- await remove(ref(db,`rooms/${code}/events`));
- await set(ref(db,`rooms/${code}/game`),{round:(game.round||0)+1,mode:settings.mode||'hide',phase:'hide',seekerId:sk,startAt:t,phaseEnd:t+settings.hide*1000,seeks:{...seeks,[sk]:(seeks[sk]||0)+1},totals:game.totals||{}});
- await set(ref(db,`rooms/${code}/status`),'playing');
+ await update(ref(db,`rooms/${code}`),{events:null,status:'playing',game:{round:(game.round||0)+1,mode:settings.mode||'hide',phase:'hide',seekerId:sk,startAt:t,phaseEnd:t+settings.hide*1000,seeks:{...seeks,[sk]:(seeks[sk]||0)+1},totals:game.totals||{}}}); // single atomic write
 }
 function endRound(w){
  if(game.phase==='end')return;
@@ -348,7 +345,7 @@ function tick(){
  if(isHost()){
   if(status==='lobby')ids().forEach(i=>{const p=players[i];if(!p.online&&p.seen&&t-p.seen>30000)remove(ref(db,`rooms/${code}/players/${i}`))});
   if(status==='playing'&&game.phase&&game.phase!=='end'){
-   if(game.phase==='hide'&&t>=game.phaseEnd)update(ref(db,`rooms/${code}/game`),{phase:'seek',seekStart:t,phaseEnd:t+settings.seek*1000});
+   if(game.phase==='hide'&&t>=game.phaseEnd)update(ref(db,`rooms/${code}/game`),{phase:'seek',seekStart:game.phaseEnd,phaseEnd:game.phaseEnd+settings.seek*1000});
    else if(game.phase==='seek'){checkEnd();if(game.phase==='seek'&&t>=game.phaseEnd)endRound('hiders')}}}
  if(!$('sbo').hidden)renderSB();
 }
@@ -390,7 +387,7 @@ function roleBanner(sk){ // random-pick animation, then the real role
 function beginRound(){
  localRound=game.round;hidden=false;scanAt=0;reveal={};buildMap();
  const sk=game.seekerId===uid,sp=sk?{x:500,y:350}:freeSpot(true);me.x=sp.x;me.y=sp.y;cam.x=me.x;cam.y=me.y;
- update(ref(db,`rooms/${code}/players/${uid}`),{x:me.x,y:me.y,hidden:false});
+ update(ref(db,`rooms/${code}/players/${uid}`),{x:me.x,y:me.y,hidden:false,vx:0,vy:0,pt:now()});
  pos={};ids().forEach(i=>pos[i]={x:players[i].x??500,y:players[i].y??350});pos[uid]=me;
  clearTk();tk={};show('game');closeOverlays();
  const LK=game.mode==='lock';roleBanner(sk);if(touch&&!window._told){window._told=1;toast('Touch & drag anywhere to move')}
@@ -401,11 +398,12 @@ function beginRound(){
 }
 
 // ===================== Game Loop: movement, sync, render =====================
-const SP={easy:150,normal:175,hard:200},CD={easy:16,normal:12,hard:9},lastMove={},VIS=230,cam={x:500,y:350},K={catch:25,hid:16,rev:22,key:52},FREE_IMM=1500,lastHit={};
-let mmT=0,lastTip='',shake=0,zoom=1,VW=1,VH=1,world,zoneA=[];
+const SP={easy:150,normal:175,hard:200},CD={easy:16,normal:12,hard:9},lastMove={},rx={},VIS=230,cam={x:500,y:350},K={catch:25,hid:16,rev:22,key:52},FREE_IMM=0,lastHit={};
+const P=()=>game.phase==='hide'&&game.phaseEnd&&now()>=game.phaseEnd?'seek':game.phase;
+let mvx=0,mvy=0,wasMv=false,mmT=0,lastTip='',shake=0,zoom=1,VW=1,VH=1,world,zoneA=[];
 // ---- Three.js scene
 const touch=matchMedia('(pointer:coarse)').matches,R=new THREE.WebGLRenderer({canvas:$('bd'),antialias:true,powerPreference:'high-performance'}),scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(50,1,5,3000),hemi=new THREE.HemisphereLight('#bfd8ff','#101428',1.4),sun=new THREE.DirectionalLight('#fff',2.2);
-R.setPixelRatio(Math.min(devicePixelRatio||1,touch?1.75:2));R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.15;
+let fpsN=0,fpsT=0,prMax=Math.min(devicePixelRatio||1,touch?1.75:2),pr=prMax;R.setPixelRatio(pr);R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.15;
 sun.castShadow=true;sun.shadow.mapSize.set(touch?1024:2048,touch?1024:2048);Object.assign(sun.shadow.camera,{left:-340,right:340,top:340,bottom:-340,near:10,far:1000});sun.shadow.bias=-.0006;scene.add(hemi,sun,sun.target);
 function resize(){const c=$('bd'),w=c.clientWidth,h=c.clientHeight;if(!w||!h)return;VW=w;VH=h;R.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 const GEO={cap:new THREE.CapsuleGeometry(10.5,12,6,14),eye:new THREE.SphereGeometry(3.4,10,8),pup:new THREE.SphereGeometry(1.8,8,6),ring:new THREE.RingGeometry(.85,1,48),sp:new THREE.SphereGeometry(2.2,6,6),pr:new THREE.RingGeometry(14,17.5,32).rotateX(-Math.PI/2)};
@@ -438,17 +436,21 @@ function clearTk(){for(const i in tk){scene.remove(tk[i]);tk[i].traverse(o=>{if(
 // ---- Frame loop: input -> movement -> network -> render
 function frame(ts){
  raf=requestAnimationFrame(frame);const dt=Math.min(.05,(ts-lastT)/1000||0);lastT=ts;
- const t=now(),ph=game.phase,iAm=uid===game.seekerId,cap=game.captured||{},dead=cap[uid]!=null,LK=game.mode==='lock',st=game.st||{},lockedMe=LK&&st[uid]==='L1';
+ const t=now(),ph=P(),PE=ph==='seek'&&game.phase==='hide'?game.phaseEnd+settings.seek*1000:game.phaseEnd,iAm=uid===game.seekerId,cap=game.captured||{},dead=cap[uid]!=null,LK=game.mode==='lock',st=game.st||{},lockedMe=LK&&st[uid]==='L1';
  if(!ph)return;
  let dx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+joy.x,dy=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0)+joy.y;
  const l=Math.hypot(dx,dy);if(l>1){dx/=l;dy/=l}
- if(l>.05&&!hidden&&!dead&&!lockedMe&&ph!=='end'&&!(iAm&&ph==='hide')){const v=(iAm?SP[settings.diff]||175:180)*dt;if(!blocked(me.x+dx*v,me.y))me.x+=dx*v;if(!blocked(me.x,me.y+dy*v))me.y+=dy*v;needSend=true}
- if(needSend&&ts-lastSend>40){lastSend=ts;needSend=false;update(ref(db,`rooms/${code}/players/${uid}`),{x:Math.round(me.x),y:Math.round(me.y)})} // ~25 updates/s
+ const ox=me.x,oy=me.y;let mv=false;
+ if(l>.05&&!hidden&&!dead&&!lockedMe&&ph!=='end'&&!(iAm&&ph==='hide')){const v=(iAm?SP[settings.diff]||175:180)*dt;if(!blocked(me.x+dx*v,me.y))me.x+=dx*v;if(!blocked(me.x,me.y+dy*v))me.y+=dy*v;mv=true}
+ if(mv){mvx+=((dt>0?(me.x-ox)/dt:0)-mvx)*.6;mvy+=((dt>0?(me.y-oy)/dt:0)-mvy)*.6;needSend=true}else if(wasMv){mvx=mvy=0;needSend=true} // always send the "stopped" packet
+ wasMv=mv;
+ if(needSend&&ts-lastSend>33){lastSend=ts;needSend=false;update(ref(db,`rooms/${code}/players/${uid}`),{x:Math.round(me.x),y:Math.round(me.y),vx:Math.round(mvx),vy:Math.round(mvy),pt:now()})} // ~30/s + velocity
  if(ph==='seek'&&!dead&&!lockedMe){if(iAm)act('catch',true);else if(LK)act('hide',true)} // auto catch / auto key, every frame
  const list=ids(),vis=[];
  for(const i in tk)if(!players[i]){scene.remove(tk[i]);delete tk[i]}
  list.forEach(i=>{const p=players[i],g=tk[i]||(tk[i]=makeTok(p)),q=pos[i]||(pos[i]={x:p.x,y:p.y});
-  if(i!==uid){const k=Math.min(1,dt*16);q.x+=((p.x??q.x)-q.x)*k;q.y+=((p.y??q.y)-q.y)*k}
+  if(i!==uid){const r=rx[i]||{x:p.x??q.x,y:p.y??q.y,vx:0,vy:0,t:0},age=r.t&&(r.vx||r.vy)?Math.max(0,Math.min(.3,(t-r.t)/1000)):0;let X=r.x+r.vx*age,Y=r.y+r.vy*age;if(blocked(X,Y)){X=r.x;Y=r.y}
+  const k=Math.hypot(X-q.x,Y-q.y)>120?1:Math.min(1,dt*22);q.x+=(X-q.x)*k;q.y+=(Y-q.y)*k}
   const isSk=i===game.seekerId,cd=cap[i]!=null;let o=1,rv=false;
   if(i===uid)o=hidden?.5:1;else if(cd)o=dead?.5:.2;else if(p.hidden)o=iAm?((reveal[i]||0)>Date.now()?.9:0):.45;
   else if(iAm&&!LK){const mv=Date.now()-(lastMove[i]||0)<2500;rv=mv;if(!mv&&dist(me,q)>VIS)o=0}
@@ -460,19 +462,20 @@ function frame(ts){
   const rc=isSk?'#ff4d6d':i===uid?'#00e5ff':rv?'#ffb347':null;g._ring.visible=!!rc;if(rc)g._ring.material.color.set(rc);
   g._cage.visible=LK&&st[i]==='L1';if(o>.5)vis.push([i,q.x,q.y,isSk])});
  // chase camera
- cam.x+=(me.x-cam.x)*Math.min(1,dt*10);cam.y+=(me.y-cam.y)*Math.min(1,dt*10);
+ cam.x+=(me.x-cam.x)*Math.min(1,dt*18);cam.y+=(me.y-cam.y)*Math.min(1,dt*18);
  const k=Math.min(1.55,Math.max(1,1.1/(VW/VH)))*zoom,cx_=Math.max(130,Math.min(870,cam.x)),tz=Math.max(90,Math.min(610,cam.y));shake*=.9;
  camera.position.set(cx_+(Math.random()-.5)*shake*8,300*k,tz+175*k+(Math.random()-.5)*shake*8);camera.lookAt(cx_,0,tz);
  sun.position.set(cx_-170,420,tz+110);sun.target.position.set(cx_,0,tz);
  const s=ts/1000;zoneA.forEach(z=>{const p=1+Math.sin(s*2+z.ph)*.05;z.ring.scale.set(p,p,1);z.sp.position.y=60+Math.sin(s*2.2+z.ph)*4;z.beam.material.opacity=.12+Math.sin(s*2+z.ph)*.04});
  $('vig').classList.toggle('on',iAm&&ph==='seek'&&!LK); // seeker's limited view
+ fpsT+=dt;if(++fpsN>=45){const avg=fpsT/fpsN;fpsN=0;fpsT=0;if(avg>.026&&pr>.75){pr=Math.max(.75,pr-.25);R.setPixelRatio(pr);resize()}else if(avg<.0185&&pr<prMax){pr=Math.min(prMax,pr+.25);R.setPixelRatio(pr);resize()}}
  stepFx(dt);R.render(scene,camera);
  if(mapOn&&ts-mmT>120){mmT=ts;$('mmd').innerHTML=vis.map(([i,x,y,s])=>`<circle cx="${x|0}" cy="${y|0}" r="${i===uid?30:22}" stroke="#fff" stroke-width="${i===uid?7:0}" fill="${s?'#ff4d6d':i===uid?'#00e5ff':'#ffd24d'}"/>`).join('')}
  const near=LK?(!iAm&&!dead&&!lockedMe&&ph==='seek'&&list.some(i=>i!==uid&&st[i]==='L1'&&cap[i]==null&&dist(me,pos[i])<=K.key)):(!hidden&&!iAm&&!dead&&zones.some(z=>dist(me,z)<=z.r));$('bh').classList.toggle('glow',near);
  const tip=dead?'':LK?(lockedMe?'🔒 You are locked! Wait for a runner to free you.':iAm?(ph==='seek'?'Touch a runner to lock them. Touch a freed runner again to knock them out!':''):near?'Stay close to your locked friend — the key frees them automatically!':ph==='hide'?'Head start! Run away from the catcher!':st[uid]==='F1'?'Careful: one more catch and you are out!':''):iAm?(ph==='seek'?'Fog limits your view. Moving hiders are revealed for 2s. Get close to catch them!':''):hidden?'Safe! The seeker cannot see you. Press E / EXIT to leave.':near?'Hiding spot! Press E or tap HIDE.':ph==='seek'&&l>.05?'⚠️ The seeker can see you while you move!':ph==='hide'?'Run to a glowing hiding spot!':'';
  if(tip!==lastTip){lastTip=tip;$('tip').textContent=tip;$('tip').style.opacity=tip?1:0}
  // HUD (touch DOM only when text changes)
- const rem=Math.max(0,Math.ceil(((game.phaseEnd||t)-t)/1000)),tx=ph==='end'?'00:00':String(rem/60|0).padStart(2,'0')+':'+String(rem%60).padStart(2,'0');
+ const rem=Math.max(0,Math.ceil(((PE||t)-t)/1000)),tx=ph==='end'?'00:00':String(rem/60|0).padStart(2,'0')+':'+String(rem%60).padStart(2,'0');
  if(tx!==lastTm){lastTm=tx;$('tm').textContent=tx;$('tm').classList.toggle('warn',rem<=10&&ph!=='end');if(rem<=10&&rem>0)sfx('tick')}
  const hl=list.filter(i=>i!==game.seekerId&&cap[i]==null&&!(LK&&st[i]==='L1')).length,lab=(ph==='hide'?(t<game.startAt+3000?'PREPARATION':LK?'HEAD START':'HIDING PHASE'):ph==='seek'?(LK?'CHASE':'SEEKING PHASE'):'ROUND END')+(ph==='end'?'':' · '+hl+(LK?' free':' hider'+(hl===1?'':'s')+' left'));if($('ph').textContent!==lab)$('ph').textContent=lab;
  const rl=dead?(LK?'OUT':'SPECTATOR'):lockedMe?'LOCKED':iAm?(LK?'CATCHER':'SEEKER'):(LK?'RUNNER':'HIDER');if($('rl').textContent!==rl){$('rl').textContent=rl;$('rl').className='chip '+(iAm?'sk':'hd')}
@@ -487,11 +490,11 @@ function stepFx(dt){for(let i=fx.length-1;i>=0;i--){const f=fx[i],u=(f.t+=dt)/f.
  if(!f.k){const s=10+u*110;f.o.scale.set(s,s,1);f.o.material.opacity=.9*(1-u)}else{f.vy-=300*dt;f.o.position.x+=f.vx*dt;f.o.position.z+=f.vz*dt;f.o.position.y=Math.max(1,f.o.position.y+f.vy*dt);f.o.material.opacity=1-u}}}
 
 // ===================== Hider / Seeker actions =====================
-function nearD(i){const p=players[i];return Math.min(dist(me,pos[i]),Math.hypot(me.x-(p.x??1e9),me.y-(p.y??1e9)))}
+function nearD(i){return dist(me,pos[i])} // what you see on screen is what counts
 // Instant hit: apply + broadcast in ONE direct write (local listeners fire immediately, no host round-trip, no cooldown)
 function hit(type,tg){
- if(Date.now()-(lastHit[tg]||0)<250)return;lastHit[tg]=Date.now();
- const g=game,st=g.st||{},LK=g.mode==='lock',n=players[tg].name,my=players[uid].name,id=push(ref(db,`rooms/${code}/events`)).key,sec=Math.round((now()-g.seekStart)/1000);let u;
+ if(Date.now()-(lastHit[tg]||0)<100)return;lastHit[tg]=Date.now();
+ const g=game,st=g.st||{},LK=g.mode==='lock',n=players[tg].name,my=players[uid].name,id=push(ref(db,`rooms/${code}/events`)).key,sec=Math.round((now()-(g.seekStart??g.phaseEnd))/1000);let u;
  if(type==='free')u={['st/'+tg]:'F1',['imm/'+tg]:now()+FREE_IMM,['frees/'+uid]:(g.frees?.[uid]||0)+1,['lk/'+tg]:null,['lt/'+tg]:(g.lt?.[tg]||0)+Math.max(0,now()-(g.lk?.[tg]||now())),ev:{id,k:'free',t:tg,c:'#7cff6b',text:`🔑 ${my} freed ${n}! Run!`}};
  else if(LK){const out=st[tg]==='F1';u={['st/'+tg]:out?'OUT':'L1',ev:{id,k:out?'out':'lock',t:tg,text:out?`❌ ${my} caught ${n} again — OUT!`:`🔒 ${my} locked ${n}!`}};if(out)u['captured/'+tg]=sec;else{u['lk/'+tg]=now();u.lc=(g.lc||0)+1}}
  else u={['captured/'+tg]:sec,ev:{id,k:'cap',t:tg,text:`🔎 ${my} captured ${n}!`}};
@@ -502,7 +505,7 @@ function checkEnd(){
  const hid=ids().filter(i=>i!==game.seekerId),cap=game.captured||{},st=game.st||{},LK=game.mode==='lock',left=hid.filter(i=>cap[i]==null&&!(LK&&st[i]==='L1'));
  if(!players[game.seekerId]||!hid.length)endRound('hiders');else if(!left.length)endRound('seeker')}
 function act(a,auto){
- if(cur!=='game'||game.phase==='end'||game.captured?.[uid]!=null)return;const iAm=uid===game.seekerId,ph=game.phase,LK=game.mode==='lock',st=game.st||{};
+ if(cur!=='game'||game.phase==='end'||game.captured?.[uid]!=null)return;const iAm=uid===game.seekerId,ph=P(),LK=game.mode==='lock',st=game.st||{};
  if(a==='hide'&&!iAm&&LK){if(ph!=='seek'||st[uid]==='L1')return;let b=null,bd=1e9;
   ids().forEach(i=>{if(i!==uid&&st[i]==='L1'&&game.captured?.[i]==null){const d=nearD(i);if(d<=K.key&&d<bd){bd=d;b=i}}});
   if(!b){if(!auto)toast('Stand next to a locked friend','warn');return}return hit('free',b)}
