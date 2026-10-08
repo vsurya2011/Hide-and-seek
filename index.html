@@ -330,11 +330,17 @@ async function startRound(){
  await set(ref(db,`rooms/${code}/status`),'playing');
 }
 function endRound(w){
- if(game.phase==='end')return;const LK=game.mode==='lock',st=game.st||{},fr=game.frees||{},cap=game.captured||{},tot={...(game.totals||{})},rs={},dur=settings.seek,hid=ids().filter(i=>i!==game.seekerId);
- hid.forEach(i=>{const s=cap[i]!=null?cap[i]:dur,pts=s*2+(cap[i]!=null?0:150)+(w==='hiders'&&cap[i]==null?100:0)+(LK?(fr[i]||0)*75:0);rs[i]={n:players[i].name,r:LK?'Runner':'Hider',v:s+'s'+(LK&&fr[i]?' · '+fr[i]+' freed':''),p:pts};tot[i]=(tot[i]||0)+pts});
- const sk=game.seekerId,nc=Object.keys(cap).length,nl=Object.keys(st).length;
- if(players[sk]){const pts=(LK?nl*60+nc*100:nc*100)+(w==='seeker'?200:0);rs[sk]={n:players[sk].name,r:LK?'Catcher':'Seeker',v:LK?nl+' locked, '+nc+' out':nc+' caught',p:pts};tot[sk]=(tot[sk]||0)+pts}
- update(ref(db,`rooms/${code}/game`),{phase:'end',winner:w,rs,totals:tot});
+ if(game.phase==='end')return;
+ const LK=game.mode==='lock',st=game.st||{},fr=game.frees||{},cap=game.captured||{},lk=game.lk||{},lt=game.lt||{},tot={...(game.totals||{})},rs={},t=now(),sk=game.seekerId,
+  el=Math.max(0,Math.min(settings.seek,Math.round((t-(game.seekStart||t))/1000))),hid=ids().filter(i=>i!==sk&&players[i]);
+ hid.forEach(i=>{const out=cap[i]!=null,locked=LK&&!out&&st[i]==='L1',surv=!out&&!locked,alive=out?cap[i]:el; // surv = still free when the round ended
+  const lockedS=LK?Math.round(((lt[i]||0)+(locked?t-(lk[i]||t):0))/1000):0,free=Math.max(0,alive-lockedS),
+   pts=free*2+(surv?150:0)+(w==='hiders'&&surv?100:0)+(LK?(fr[i]||0)*75:0);
+  rs[i]={n:players[i].name,r:LK?'Runner':'Hider',v:`${LK?free:alive}s ${out?'❌':locked?'🔒':'✅'}${LK&&fr[i]?' · 🔑'+fr[i]:''}`,p:pts};tot[i]=(tot[i]||0)+pts});
+ const nc=Object.keys(cap).length,nl=game.lc??Object.keys(st).length;
+ if(players[sk]){const pts=(LK?nl*60:0)+nc*100+(w==='seeker'?200:0);rs[sk]={n:players[sk].name,r:LK?'Catcher':'Seeker',v:LK?`${nl} locks · ${nc} out`:`${nc} caught`,p:pts};tot[sk]=(tot[sk]||0)+pts}
+ const best=a=>a.filter(i=>rs[i]).sort((x,y)=>rs[y].p-rs[x].p)[0],mvp=best(w==='seeker'?[sk]:hid)||best(Object.keys(rs))||null; // MVP = top scorer of the WINNING side
+ update(ref(db,`rooms/${code}/game`),{phase:'end',winner:w,rs,totals:tot,mvp});
 }
 function tick(){
  const t=now(),h=players[hostId];
@@ -355,14 +361,14 @@ function handleEvent(s){const e=s.val();if(!e||!isHost())return;remove(s.ref);
   if(LK){ // Lock & Key: 1st catch = locked, caught again after being freed = out
    if(st[e.target]==='L1'||(game.imm?.[e.target]||0)>now()||d>K.catch*1.8+30)return;
    const out=st[e.target]==='F1',u={['st/'+e.target]:out?'OUT':'L1',ev:{id:s.key,text:out?`❌ ${by.name} caught ${tg.name} again — OUT!`:`🔒 ${by.name} locked ${tg.name}!`,t:e.target}};
-   if(out)u['captured/'+e.target]=Math.round((now()-game.seekStart)/1000);
+   if(out)u['captured/'+e.target]=Math.round((now()-game.seekStart)/1000);else{u['lk/'+e.target]=now();u.lc=(game.lc||0)+1}
    update(g,u);
   }else{
    if(d>(tg.hidden?K.hid:K.catch)*1.8+30)return; // server-side distance check (lag tolerant)
    update(g,{['captured/'+e.target]:Math.round((now()-game.seekStart)/1000),ev:{id:s.key,text:`🔎 ${by.name} captured ${tg.name}!`,t:e.target}});
   }
  }else if(e.type==='free'&&LK&&e.by!==game.seekerId&&st[e.by]!=='L1'&&cap[e.by]==null&&st[e.target]==='L1'&&d<=K.key*1.8+30){
-  update(g,{['st/'+e.target]:'F1',['imm/'+e.target]:now()+FREE_IMM,['frees/'+e.by]:(game.frees?.[e.by]||0)+1,ev:{id:s.key,text:`🔑 ${by.name} freed ${tg.name}! Run!`,t:e.target,c:'#7cff6b'}});
+  update(g,{['st/'+e.target]:'F1',['imm/'+e.target]:now()+FREE_IMM,['frees/'+e.by]:(game.frees?.[e.by]||0)+1,['lk/'+e.target]:null,['lt/'+e.target]:(game.lt?.[e.target]||0)+Math.max(0,now()-(game.lk?.[e.target]||now())),ev:{id:s.key,text:`🔑 ${by.name} freed ${tg.name}! Run!`,t:e.target,c:'#7cff6b'}});
  }
 }
 function onGame(v){const p=game,g=v||{};game=g;
@@ -486,8 +492,8 @@ function nearD(i){const p=players[i];return Math.min(dist(me,pos[i]),Math.hypot(
 function hit(type,tg){
  if(Date.now()-(lastHit[tg]||0)<250)return;lastHit[tg]=Date.now();
  const g=game,st=g.st||{},LK=g.mode==='lock',n=players[tg].name,my=players[uid].name,id=push(ref(db,`rooms/${code}/events`)).key,sec=Math.round((now()-g.seekStart)/1000);let u;
- if(type==='free')u={['st/'+tg]:'F1',['imm/'+tg]:now()+FREE_IMM,['frees/'+uid]:(g.frees?.[uid]||0)+1,ev:{id,k:'free',t:tg,c:'#7cff6b',text:`🔑 ${my} freed ${n}! Run!`}};
- else if(LK){const out=st[tg]==='F1';u={['st/'+tg]:out?'OUT':'L1',ev:{id,k:out?'out':'lock',t:tg,text:out?`❌ ${my} caught ${n} again — OUT!`:`🔒 ${my} locked ${n}!`}};if(out)u['captured/'+tg]=sec}
+ if(type==='free')u={['st/'+tg]:'F1',['imm/'+tg]:now()+FREE_IMM,['frees/'+uid]:(g.frees?.[uid]||0)+1,['lk/'+tg]:null,['lt/'+tg]:(g.lt?.[tg]||0)+Math.max(0,now()-(g.lk?.[tg]||now())),ev:{id,k:'free',t:tg,c:'#7cff6b',text:`🔑 ${my} freed ${n}! Run!`}};
+ else if(LK){const out=st[tg]==='F1';u={['st/'+tg]:out?'OUT':'L1',ev:{id,k:out?'out':'lock',t:tg,text:out?`❌ ${my} caught ${n} again — OUT!`:`🔒 ${my} locked ${n}!`}};if(out)u['captured/'+tg]=sec;else{u['lk/'+tg]=now();u.lc=(g.lc||0)+1}}
  else u={['captured/'+tg]:sec,ev:{id,k:'cap',t:tg,text:`🔎 ${my} captured ${n}!`}};
  update(ref(db,`rooms/${code}/game`),u).catch(()=>push(ref(db,`rooms/${code}/events`),{type:type==='free'?'free':'catch',by:uid,target:tg,t:now()})); // fallback if DB rules only allow host writes
  checkEnd()}
@@ -506,7 +512,7 @@ function act(a,auto){
  if(a==='scan'&&iAm&&ph==='seek'&&!LK){const cd=CD[settings.diff]||12;if(Date.now()-scanAt<cd*1000)return;scanAt=Date.now();sfx('scan');burst(me.x,me.y,'#00e5ff');
   let n=0;ids().forEach(i=>{if(i!==uid&&players[i].hidden&&game.captured?.[i]==null&&dist(me,pos[i])<=170){reveal[i]=Date.now()+3000;n++}});toast(n?`Scan found ${n} hidden player${n>1?'s':''}!`:'Scan: nothing nearby','warn')}
  if(a==='catch'&&iAm&&ph==='seek'){let best=null,bd=1e9;const t=now();
-  ids().forEach(i=>{if(i===uid||game.captured?.[i]!=null||(LK&&(st[i]==='L1'||(game.imm?.[i]||0)>t)))return;const d=nearD(i),r=players[i].hidden?((reveal[i]||0)>Date.now()?K.rev:K.hid):K.catch;if(d<=r&&d<bd){bd=d;best=i}});
+  ids().forEach(i=>{if(i===uid||game.captured?.[i]!=null||(LK&&(st[i]==='L1'||(game.imm?.[i]||0)>t)))return;const d=nearD(i),r=(players[i].hidden?((reveal[i]||0)>Date.now()?K.rev:K.hid):K.catch)+Math.min(8,(tk[i]?._sp||0)*.04);if(d<=r&&d<bd){bd=d;best=i}});
   if(!best){if(!auto)toast('Missed! Get closer','warn');return}hit('catch',best)}
 }
 
@@ -516,8 +522,8 @@ function renderSB(){const cap=game.captured||{},tot=game.totals||{},LK=game.mode
 function showResult(){
  cancelAnimationFrame(raf);closeOverlays();show('result');const w=game.winner,rs=game.rs||{},tot=game.totals||{},me_s=uid===game.seekerId;
  $('rt').textContent=game.mode==='lock'?(w==='seeker'?'🔒 CATCHER WINS!':'🏃 RUNNERS WIN!'):(w==='seeker'?'🔎 SEEKER WINS!':'🏆 HIDERS WIN!');sfx((w==='seeker')===me_s?'win':'lose');
- const rows=Object.entries(rs).sort((a,b)=>b[1].p-a[1].p);
- $('rs').innerHTML='<b>Player</b><b>Role</b><b>Result</b><b>Round</b><b>Total</b>'+rows.map(([i,r],k)=>`<div>${k?'':'⭐ '}${esc(r.n)}</div><div>${r.r}</div><div>${r.v}</div><div>+${r.p}</div><div>${tot[i]||0}</div>`).join('')+(rows[0]?`<div style="grid-column:1/-1;text-align:center;color:#ffd24d">MVP: ${esc(rows[0][1].n)}</div>`:'');
+ const rows=Object.entries(rs).sort((a,b)=>b[1].p-a[1].p),mv=game.mvp&&rs[game.mvp]?game.mvp:rows[0]?.[0];
+ $('rs').innerHTML='<b>Player</b><b>Role</b><b>Result</b><b>Round</b><b>Total</b>'+rows.map(([i,r])=>`<div>${i===mv?'⭐ ':''}${esc(r.n)}</div><div>${r.r}</div><div>${r.v}</div><div>+${r.p}</div><div>${tot[i]||0}</div>`).join('')+(mv?`<div style="grid-column:1/-1;text-align:center;color:#ffd24d">MVP: ${esc(rs[mv].n)}</div>`:'');
  $('rb').innerHTML=(isHost()?'<button class="btn" data-act="start">Play again</button><button class="btn alt" data-act="tolobby">Return to lobby</button>':'<small>Waiting for the host…</small>')+'<button class="ghost" data-act="leave">Leave room</button>'}
 
 // ===================== Input & Event Delegation =====================
