@@ -268,25 +268,27 @@ function enter(c){
  code=c;players={};pos={};game={};status='lobby';localRound=0;sKey='';tk={};
  const base=`rooms/${c}/`,pr=ref(db,base+'players'),put=s=>{const v=s.val(),o=players[s.key];if(o&&s.key!==uid){if(o.x!==v.x||o.y!==v.y)lastMove[s.key]=Date.now();if(o.hidden&&!v.hidden&&game.phase==='seek'&&uid===game.seekerId){lastMove[s.key]=Date.now();toast('👀 A hider left their hiding spot!','warn');sfx('scan');burst(v.x,v.y,'#ffb347')}}players[s.key]=v;if(!pos[s.key])pos[s.key]={x:v.x??500,y:v.y??350};dirty()};
  on('hostId',v=>{hostId=v;sync();renderLobby()});
- on('status',v=>{status=v||'lobby';sync()});
+ on('status',v=>{if(v==null){if(code){toast('Room was closed','warn');leaveRoom()}return}status=v;sync()});
  on('settings',v=>{settings=v||S0;renderSettings()});
  on('game',onGame);
  unsubs.push(onChildAdded(pr,put),onChildChanged(pr,put),onChildRemoved(pr,s=>{delete players[s.key];delete pos[s.key];dirty()}));
  // presence
- unsubs.push(onValue(ref(db,'.info/connected'),s=>{if(s.val()&&players[uid]!==undefined||s.val()){const p=ref(db,base+'players/'+uid);get(p).then(x=>{if(x.exists()){update(p,{online:true});onDisconnect(p).update({online:false,seen:serverTimestamp()});if(code&&players[uid]&&!navigator.onLine===false)toast('Connected 🟢')}})}else toast('Connection lost — reconnecting…','warn')}));
+ unsubs.push(onValue(ref(db,'.info/connected'),s=>{if(s.val()&&players[uid]!==undefined||s.val()){const p=ref(db,base+'players/'+uid);get(p).then(x=>{if(code===c&&x.exists()){update(p,{online:true});onDisconnect(p).update({online:false,seen:serverTimestamp()});if(code&&players[uid]&&!navigator.onLine===false)toast('Connected 🟢')}})}else toast('Connection lost — reconnecting…','warn')}));
  unsubs.push(onValue(ref(db,'.info/serverTimeOffset'),s=>offset=s.val()||0));
  unsubs.push(onChildAdded(ref(db,base+'events'),handleEvent));
  timers.push(setInterval(tick,150));
  show('lobby');sfx('join');
 }
+let roleT=[];
+function closeOverlays(){['sbo','pm'].forEach(i=>{$(i).hidden=true;$(i).classList.remove('show')});roleT.forEach(t=>{clearInterval(t);clearTimeout(t)});roleT=[];$('role').className='ov';['blind','spec'].forEach(i=>$(i).classList.remove('show'));$('vig').classList.remove('on')}
+function resetLocal(){cancelAnimationFrame(raf);clearTk();fx.splice(0).forEach(f=>{scene.remove(f.o);f.o.material.dispose()});keys={};joy.x=joy.y=0;$('knob').style.transform='';hidden=false;needSend=false;reveal={};lastTm='';lastTip='';shake=0;localRound=0;hostGone=0;closeOverlays()}
 function leaveRoom(){
- const c=code;if(!c)return;const others=Object.keys(players).filter(i=>i!==uid);
- unsubs.forEach(u=>u());unsubs=[];timers.forEach(clearInterval);timers=[];cancelAnimationFrame(raf);
- const p=ref(db,`rooms/${c}/players/${uid}`);onDisconnect(p).cancel();
+ const c=code;if(!c)return;const others=Object.keys(players).filter(i=>i!==uid),wasHost=hostId===uid,next=others.find(i=>players[i].online)||others[0];
+ unsubs.forEach(u=>u());unsubs=[];timers.forEach(clearInterval);timers=[];clearTimeout(dt);code=null; // stop all listeners first
+ const p=ref(db,`rooms/${c}/players/${uid}`);onDisconnect(p).cancel().catch(()=>{});
  if(!others.length)remove(ref(db,'rooms/'+c));
- else{if(hostId===uid){const n=others.find(i=>players[i].online)||others[0];set(ref(db,`rooms/${c}/hostId`),n)}remove(p)}
- code=null;players={};pos={};game={};hidden=false;clearTk();tk={};show('landing');
-}
+ else{if(wasHost)set(ref(db,`rooms/${c}/hostId`),next);remove(p)}
+ players={};pos={};game={};settings={};hostId=null;status='lobby';sKey='';resetLocal();show('landing')}
 function setSetting(k,v){if(!isHost())return;if(k==='max'&&v<Object.keys(players).length)return toast('More players than that are already in','err');update(ref(db,`rooms/${code}/settings`),{[k]:v})}
 
 // ===================== Lobby =====================
@@ -331,15 +333,15 @@ function handleEvent(s){const e=s.val();if(!e||!isHost())return;remove(s.ref);
  const d=dist(tg,by);
  if(e.type==='catch'&&e.by===game.seekerId){
   if(LK){ // Lock & Key: 1st catch = locked, caught again after being freed = out
-   if(st[e.target]==='L1'||(game.imm?.[e.target]||0)>now()||d>44*1.8+30)return;
+   if(st[e.target]==='L1'||(game.imm?.[e.target]||0)>now()||d>K.catch*1.8+30)return;
    const out=st[e.target]==='F1',u={['st/'+e.target]:out?'OUT':'L1',ev:{id:s.key,text:out?`❌ ${by.name} caught ${tg.name} again — OUT!`:`🔒 ${by.name} locked ${tg.name}!`,t:e.target}};
    if(out)u['captured/'+e.target]=Math.round((now()-game.seekStart)/1000);
    update(g,u);
   }else{
-   if(d>(tg.hidden?28:44)*1.8+30)return; // server-side distance check (lag tolerant)
+   if(d>(tg.hidden?K.hid:K.catch)*1.8+30)return; // server-side distance check (lag tolerant)
    update(g,{['captured/'+e.target]:Math.round((now()-game.seekStart)/1000),ev:{id:s.key,text:`🔎 ${by.name} captured ${tg.name}!`,t:e.target}});
   }
- }else if(e.type==='free'&&LK&&e.by!==game.seekerId&&st[e.by]!=='L1'&&cap[e.by]==null&&st[e.target]==='L1'&&d<=44*1.8+30){
+ }else if(e.type==='free'&&LK&&e.by!==game.seekerId&&st[e.by]!=='L1'&&cap[e.by]==null&&st[e.target]==='L1'&&d<=K.key*1.8+30){
   update(g,{['st/'+e.target]:'F1',['imm/'+e.target]:now()+FREE_IMM,['frees/'+e.by]:(game.frees?.[e.by]||0)+1,ev:{id:s.key,text:`🔑 ${by.name} freed ${tg.name}! Run!`,t:e.target,c:'#7cff6b'}});
  }
 }
@@ -348,7 +350,7 @@ function onGame(v){const p=game,g=v||{};game=g;
  if(p.round===g.round&&p.phase==='hide'&&g.phase==='seek')toast(g.mode==='lock'?'🔒 The chase begins!':'🔎 The hunt begins!');
  sync();if(isHost())checkEnd()}
 function sync(){if(!code)return;
- if(status==='lobby'){if(cur==='game'||cur==='result'){cancelAnimationFrame(raf);clearTk();tk={};localRound=0;show('lobby');renderLobby()}return}
+ if(status==='lobby'){if(cur==='game'||cur==='result'){resetLocal();show('lobby');renderLobby()}return}
  if(status==='playing'&&game.round){
   if(game.phase==='end'){if(cur!=='result'){localRound=game.round;showResult()}}
   else if(game.round!==localRound)beginRound()}}
@@ -356,15 +358,15 @@ function roleBanner(sk){ // random-pick animation, then the real role
  const LK=game.mode==='lock',r=$('role'),names=ids().map(i=>players[i].name),A=LK?'CATCHER':'SEEKER';let n=Math.random()*names.length|0;
  r.className='ov show';r.innerHTML=`<div>PICKING THE ${A}…<small id="rp" style="font:30px Bungee,Impact,sans-serif;color:#ffd24d"></small></div>`;
  const iv=setInterval(()=>{const e=$('rp');if(e)e.textContent=names[n++%names.length];sfx('tick')},90);
- setTimeout(()=>{clearInterval(iv);r.className='ov show '+(sk?'sk':'hd');
+ roleT.push(iv,setTimeout(()=>{clearInterval(iv);r.className='ov show '+(sk?'sk':'hd');
   r.innerHTML=`<div>${sk?(LK?'YOU ARE THE CATCHER 🔒':'YOU ARE THE SEEKER 🔎'):(LK?'YOU ARE A RUNNER 🏃':'YOU ARE A HIDER 👤')}<small>${LK?(sk?'Frozen during the head start. Then touch runners to lock them — touch a freed runner again and they are out!':'Run! Stand next to a locked friend to free them with the key. Caught twice = out.'):(sk?'Eyes closed while they hide. Then get close to a hider to catch them.':'Reach a glowing hiding spot and press HIDE.')}<br><b style="color:#ffd24d">${esc(players[game.seekerId]?.name||'')} is the ${A.toLowerCase()}</b></small></div>`;
-  sfx('role');setTimeout(()=>r.className='ov',2200)},1300)}
+  sfx('role');roleT.push(setTimeout(()=>r.className='ov',2200))},1300))}
 function beginRound(){
  localRound=game.round;hidden=false;scanAt=0;reveal={};buildMap();
  const sk=game.seekerId===uid,sp=sk?{x:500,y:350}:freeSpot(true);me.x=sp.x;me.y=sp.y;cam.x=me.x;cam.y=me.y;
  update(ref(db,`rooms/${code}/players/${uid}`),{x:me.x,y:me.y,hidden:false});
  pos={};ids().forEach(i=>pos[i]={x:players[i].x??500,y:players[i].y??350});pos[uid]=me;
- clearTk();tk={};show('game');$('sbo').hidden=true;$('pm').hidden=true;
+ clearTk();tk={};show('game');closeOverlays();
  const LK=game.mode==='lock';roleBanner(sk);
  $('blind').innerHTML=LK?'<div>FROZEN ⏳<small>Runners get a head start. You move when the timer hits zero.</small></div>':'<div>EYES CLOSED 🙈<small>Hiders are hiding… you move when the timer hits zero.</small></div>';
  $('spec').innerHTML=`<div>${LK?'YOU ARE OUT ❌':"YOU'VE BEEN CAPTURED"}<small>Spectating — watch the round play out.</small></div>`;
@@ -373,7 +375,7 @@ function beginRound(){
 }
 
 // ===================== Game Loop: movement, sync, render =====================
-const SP={easy:150,normal:175,hard:200},CD={easy:16,normal:12,hard:9},lastMove={},VIS=230,cam={x:500,y:350},K={catch:50,hid:32,rev:44,key:52},FREE_IMM=1500,lastHit={};
+const SP={easy:150,normal:175,hard:200},CD={easy:16,normal:12,hard:9},lastMove={},VIS=230,cam={x:500,y:350},K={catch:25,hid:16,rev:22,key:52},FREE_IMM=1500,lastHit={};
 let mmT=0,lastTip='',shake=0,zoom=1,VW=1,VH=1,world,zoneA=[];
 // ---- Three.js scene
 const touch=matchMedia('(pointer:coarse)').matches,R=new THREE.WebGLRenderer({canvas:$('bd'),antialias:true,powerPreference:'high-performance'}),scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(50,1,5,3000),hemi=new THREE.HemisphereLight('#bfd8ff','#101428',1.4),sun=new THREE.DirectionalLight('#fff',2.2);
@@ -492,7 +494,7 @@ function act(a,auto){
 function renderSB(){const cap=game.captured||{},tot=game.totals||{},LK=game.mode==='lock',st=game.st||{};
  $('sbt').innerHTML='<b>Player</b><b>Role</b><b>Caught</b><b>Survival</b><b>Total</b>'+ids().map(i=>{const sk=i===game.seekerId;return`<div>${esc(players[i].name)}</div><div>${sk?(LK?'Catcher':'Seeker'):(LK?'Runner':'Hider')}</div><div>${sk?Object.keys(cap).length:'—'}</div><div>${sk?'—':cap[i]!=null?cap[i]+'s':LK&&st[i]==='L1'?'🔒 locked':'alive'}</div><div>${tot[i]||0}</div>`}).join('')}
 function showResult(){
- cancelAnimationFrame(raf);show('result');const w=game.winner,rs=game.rs||{},tot=game.totals||{},me_s=uid===game.seekerId;
+ cancelAnimationFrame(raf);closeOverlays();show('result');const w=game.winner,rs=game.rs||{},tot=game.totals||{},me_s=uid===game.seekerId;
  $('rt').textContent=game.mode==='lock'?(w==='seeker'?'🔒 CATCHER WINS!':'🏃 RUNNERS WIN!'):(w==='seeker'?'🔎 SEEKER WINS!':'🏆 HIDERS WIN!');sfx((w==='seeker')===me_s?'win':'lose');
  const rows=Object.entries(rs).sort((a,b)=>b[1].p-a[1].p);
  $('rs').innerHTML='<b>Player</b><b>Role</b><b>Result</b><b>Round</b><b>Total</b>'+rows.map(([i,r],k)=>`<div>${k?'':'⭐ '}${esc(r.n)}</div><div>${r.r}</div><div>${r.v}</div><div>+${r.p}</div><div>${tot[i]||0}</div>`).join('')+(rows[0]?`<div style="grid-column:1/-1;text-align:center;color:#ffd24d">MVP: ${esc(rows[0][1].n)}</div>`:'');
