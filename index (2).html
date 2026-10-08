@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Hide & Seek 3D</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Bungee&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070a16;--c1:#00e5ff;--c2:#b36bff;--c3:#ff4d6d;--g:rgba(255,255,255,.07)}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+body{background:radial-gradient(circle at 15% 10%,#231a5c,transparent 50%),radial-gradient(circle at 85% 95%,#0b3a55,transparent 50%),var(--bg);color:#eaf2ff;font:15px/1.4 "Trebuchet MS",system-ui,sans-serif;min-height:100vh;overflow-x:hidden;touch-action:manipulation}
+.scr{display:none;min-height:100vh;padding:18px;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.scr.on{display:flex;animation:in .35s}
+@keyframes in{from{opacity:0;transform:translateY(12px)}}
+h1{font:900 clamp(40px,9vw,84px)/1 Impact,"Arial Black",sans-serif;letter-spacing:2px;text-shadow:0 0 30px var(--c2)}
+h1 span{color:var(--c3)}
+.card{background:var(--g);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(14px);border-radius:22px;padding:20px;box-shadow:0 12px 50px #000a,inset 0 0 30px rgba(0,229,255,.04);width:100%;max-width:600px;display:flex;flex-direction:column;gap:12px}
+.btn{border:0;border-radius:14px;padding:13px 22px;font:800 15px inherit;color:#041018;background:linear-gradient(135deg,var(--c1),var(--c2));cursor:pointer;box-shadow:0 0 18px rgba(0,229,255,.4);transition:.15s}
+.btn:hover:not(:disabled){transform:translateY(-2px) scale(1.03)}.btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+.btn.alt{background:linear-gradient(135deg,#ff9f43,var(--c3));color:#fff}
+.ghost,.ico,.tabs button{background:var(--g);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;font:inherit}
+.ghost:hover,.ico:hover{background:rgba(255,255,255,.15)}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.tabs{display:flex;gap:8px}.tabs button{flex:1}.tabs .on{background:var(--c1);color:#041018;font-weight:800}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:#9fb4d8}
+input,select{background:#0c1430;border:1px solid #2c3d73;border-radius:10px;color:#fff;padding:10px;font:inherit;outline:0}
+input:focus,select:focus{border-color:var(--c1);box-shadow:0 0 12px rgba(0,229,255,.4)}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.cgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.cgrid button{background:var(--g);border:2px solid transparent;border-radius:12px;padding:2px;cursor:pointer}
+.cgrid button.sel{border-color:var(--c1);box-shadow:0 0 14px var(--c1);transform:scale(1.08)}
+.lbl{font-size:13px;color:#9fb4d8}
+.code{font:900 40px Impact,sans-serif;letter-spacing:8px;color:var(--c1);text-shadow:0 0 16px var(--c1)}
+.rh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.pl{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border-radius:14px;padding:6px 10px}
+.pl b{flex:1}.host{font-style:normal;color:#ffd24d;font-size:12px}
+.pl em{font:800 11px inherit;font-style:normal;padding:3px 8px;border-radius:20px}.rd{background:#0f5a3a;color:#7cff6b}.nr{background:#5a2a2a;color:#ff9a9a}
+.prev{display:flex;justify-content:center;animation:fl 2.4s ease-in-out infinite}@keyframes fl{50%{transform:translateY(-6px)}}
+.hud{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:1000px;gap:8px}
+.mid{text-align:center}.mid small{display:block;color:#9fb4d8;font-size:12px}
+#tm{font:900 40px Impact,sans-serif;letter-spacing:3px;text-shadow:0 0 14px var(--c1)}
+#tm.warn{color:var(--c3);animation:pu .5s infinite alternate}@keyframes pu{to{transform:scale(1.25)}}
+.chip{padding:6px 12px;border-radius:20px;font-weight:800;min-width:90px;text-align:center}.chip.sk{background:var(--c3)}.chip.hd{background:#2a7bff}
+.board{position:relative;width:100%;max-width:1000px;border-radius:18px;overflow:hidden;border:2px solid rgba(0,229,255,.35);box-shadow:0 0 30px rgba(179,107,255,.3)}
+#bd{display:block;width:100%;height:auto;max-height:calc(100vh - 210px)}
+.ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;background:rgba(5,8,20,.82);z-index:20;font:900 clamp(26px,6vw,56px) Impact,sans-serif;flex-direction:column;gap:10px;backdrop-filter:blur(6px)}
+.ov small{font:16px "Trebuchet MS",sans-serif;color:#bcd}
+.ov.show{display:flex;animation:in .3s}.ov.sk{color:var(--c3)}.ov.hd{color:var(--c1)}
+.board .ov{position:absolute;z-index:5;background:rgba(5,8,20,.7)}
+.ctl{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:1000px;gap:10px}
+#joy{width:130px;height:130px;border-radius:50%;background:var(--g);border:2px solid rgba(255,255,255,.2);position:relative;touch-action:none;display:none}
+#knob{position:absolute;left:44px;top:44px;width:42px;height:42px;border-radius:50%;background:var(--c1);box-shadow:0 0 16px var(--c1)}
+@media(pointer:coarse){#joy{display:block}.hint{display:none}}
+.btns{display:flex;gap:8px;margin-left:auto}.btns button{width:76px;height:76px;border-radius:50%;border:2px solid #fff3;background:var(--g);color:#fff;font:800 12px inherit;cursor:pointer;touch-action:none}
+.btns button:active{background:var(--c1);color:#000}.btns button[hidden]{display:none}
+.hint{font-size:12px;color:#7f93b8}
+#toasts{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.t{background:#10183c;border:1px solid var(--c1);border-radius:14px;padding:10px 18px;box-shadow:0 0 20px #0008;animation:in .3s}.t.err{border-color:var(--c3)}.t.warn{border-color:#ffd24d}
+.tbl{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:6px;font-size:13px;align-items:center}.tbl>b{color:#9fb4d8;font-size:11px}
+.tbl>div{padding:6px 0;border-top:1px solid #fff1}
+.zn{animation:zp 2s ease-in-out infinite}@keyframes zp{50%{stroke-opacity:.4}}
+.shock{transform-box:fill-box;transform-origin:center;animation:sh .7s forwards}@keyframes sh{from{transform:scale(.2);opacity:1}to{transform:scale(4);opacity:0}}
+.pt{animation:pt .8s forwards}@keyframes pt{to{transform:translate(var(--dx),var(--dy));opacity:0}}
+.logo{animation:fl 3s ease-in-out infinite}
+
+button,input,select{font-family:inherit}
+body{font-family:Fredoka,"Trebuchet MS",system-ui,sans-serif;font-size:16px}
+h1,.code,#tm,.ov,.chip,.btns button{font-family:Bungee,Impact,sans-serif;font-weight:400}
+h1{font-size:clamp(44px,10vw,92px);letter-spacing:3px}
+.ov{font-size:clamp(22px,5.2vw,46px)}
+.card{background:rgba(14,20,50,.72)}
+.btn{font-weight:700;font-size:17px;border-bottom:5px solid rgba(0,0,0,.35);padding:13px 26px}
+.btn:active:not(:disabled){transform:translateY(3px);border-bottom-width:2px}
+.ghost,.ico,.tabs button{font-size:15px;font-weight:600}
+.pl em{font-size:11px;font-weight:700}
+.pl{padding:8px 12px}
+.lc{display:inline-block;animation:fl 2.4s ease-in-out infinite}
+#tm{font-size:34px}.chip{font-size:14px}
+.board{max-width:1200px;height:calc(100dvh - 150px);min-height:260px;background:#000}
+#bd{height:100%;max-height:none}
+.btns button{width:84px;height:84px;font-size:13px;background:rgba(10,16,40,.78);backdrop-filter:blur(6px)}
+#bh.glow{border-color:#7cff6b;box-shadow:0 0 24px #7cff6b;animation:gl .7s infinite alternate}@keyframes gl{to{transform:scale(1.12)}}
+.tip{position:absolute;left:10px;top:10px;max-width:calc(100% - 170px);background:rgba(8,12,30,.82);border:1px solid #fff3;border-radius:16px;padding:6px 14px;font-size:14px;pointer-events:none;transition:opacity .2s;opacity:0;z-index:4}
+#mm{position:absolute;right:10px;top:10px;width:clamp(90px,16vw,150px);background:rgba(5,8,20,.8);border:2px solid #fff3;border-radius:10px;z-index:4;pointer-events:none}
+@media(pointer:coarse){.ctl{position:fixed;left:0;right:0;bottom:10px;padding:0 14px;pointer-events:none;z-index:8}.ctl>*{pointer-events:auto}.board{height:calc(100dvh - 78px)}#joy{background:rgba(10,16,40,.55)}}
+@media(max-width:520px){.tip{font-size:12px;max-width:calc(100% - 120px)}.cgrid{grid-template-columns:repeat(4,1fr)}.code{font-size:30px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* ===== 3D fullscreen layout ===== */
+#game{position:fixed;inset:0;padding:0;gap:0;background:#05070f}#game.on{display:block}
+.board{position:absolute;inset:0;max-width:none;height:auto;min-height:0;border:0;border-radius:0;box-shadow:none}
+#bd{position:absolute;inset:0;width:100%;height:100%;max-height:none;touch-action:none;outline:0}
+.hud{position:absolute;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));width:auto;max-width:none;z-index:6;pointer-events:none}
+.hud>*{background:rgba(8,12,30,.55);backdrop-filter:blur(10px);border:1px solid #fff2;border-radius:16px;padding:5px 12px}.hud button{pointer-events:auto}
+#mm{top:68px}.tip{top:68px}
+#vig{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;background:radial-gradient(circle at 50% 55%,transparent 22%,rgba(2,4,12,.92) 76%);z-index:3}#vig.on{opacity:1}
+.ctl{position:absolute;left:0;right:0;bottom:0;max-width:none;padding:0 16px calc(14px + env(safe-area-inset-bottom));pointer-events:none;z-index:8}.ctl>*{pointer-events:auto}
+.hint{position:absolute;bottom:8px;left:0;right:0;text-align:center;z-index:5;pointer-events:none}
+@media(pointer:coarse){.ctl{position:absolute}.board{height:auto}}
+</style></head>
+<body>
+<div id="toasts"></div>
+<button class="ico" data-act="snd" id="sndb" style="position:fixed;right:12px;top:12px;z-index:30">🔊</button>
+
+<section class="scr on" id="landing">
+<svg class="logo" width="120" height="120" viewBox="0 0 120 120"><circle cx="50" cy="50" r="34" fill="none" stroke="#00e5ff" stroke-width="9"/><path d="M75 75L108 108" stroke="#ff4d6d" stroke-width="12" stroke-linecap="round"/><circle cx="42" cy="46" r="6" fill="#fff"/><circle cx="58" cy="46" r="6" fill="#fff"/><circle cx="43" cy="47" r="3" fill="#111"/><circle cx="59" cy="47" r="3" fill="#111"/></svg>
+<h1>HIDE<span>&amp;</span>SEEK</h1>
+<p style="color:#9fb4d8">Two games: Hide &amp; Seek and Lock &amp; Key. One catcher, everyone else runs.</p><div class="row" id="lrow"></div>
+<div class="row"><button class="btn" data-act="go" data-v="create">Create room</button><button class="btn alt" data-act="go" data-v="join">Join room</button></div>
+</section>
+
+<section class="scr" id="setup"><div class="card">
+<div class="tabs"><button data-act="go" data-v="create" id="tc">Create</button><button data-act="go" data-v="join" id="tj">Join</button></div>
+<label>Player name<input id="nm" maxlength="14" placeholder="Your name"></label>
+<label id="jc">Room code<input id="rcode" maxlength="6" placeholder="H7K9P2" style="text-transform:uppercase;letter-spacing:4px"></label>
+<div class="lbl">Character</div><div class="prev" id="prev"></div><div class="cgrid" id="cg"></div>
+<div id="cs" class="sg"></div>
+<button class="btn" id="go" data-act="submit">Create room</button>
+<button class="ghost" data-act="home">Back</button></div></section>
+
+<section class="scr" id="lobby"><div class="card">
+<div class="rh"><div><div class="lbl">Room code</div><div class="code" id="rc"></div></div><div class="row"><button class="ghost" data-act="copy">Copy code</button><button class="ghost" data-act="share">Share</button></div></div>
+<div id="plist" style="display:flex;flex-direction:column;gap:6px"></div>
+<div class="lbl">Your character</div><div class="cgrid" id="lcg"></div>
+<div id="ls" class="sg"></div>
+<div class="row"><button class="btn alt" data-act="ready" id="rdy">Ready</button><button class="btn" data-act="start" id="st">Start game</button><button class="ghost" data-act="leave">Leave</button></div></div></section>
+
+<section class="scr" id="game">
+<div class="hud"><div id="rl" class="chip"></div><div class="mid"><small id="ph"></small><b id="tm">00:00</b></div><div><button class="ico" data-act="sb">🏆</button> <button class="ico" data-act="pause">⏸</button></div></div>
+<div class="board"><canvas id="bd"></canvas><div id="vig"></div><svg id="mm" viewBox="0 0 1000 700"><g id="mmb"></g><g id="mmd"></g></svg><div id="tip" class="tip"></div>
+<div id="blind" class="ov"><div>EYES CLOSED 🙈<small>Hiders are hiding… you move when the timer hits zero.</small></div></div>
+<div id="spec" class="ov" style="background:rgba(60,5,20,.55);justify-content:flex-start;padding-top:20px;pointer-events:none"><div>YOU'VE BEEN CAPTURED<small>Spectating — watch the round play out.</small></div></div></div>
+<div class="ctl"><div id="joy"><i id="knob"></i></div><div class="btns"><button id="bh" data-a="hide">HIDE</button><button id="bs" data-a="scan" hidden>SCAN</button><button id="bc" data-a="catch" hidden>CATCH</button></div></div>
+<div class="hint">WASD / arrows move · E hide / key · Q scan (seeker) · touch = instant catch / free · wheel zoom · Esc pause</div></section>
+
+<section class="scr" id="result"><div class="card"><h2 id="rt" style="font:900 34px Impact,sans-serif;text-align:center"></h2><div id="rs" class="tbl"></div><div class="row" id="rb"></div></div></section>
+
+<div id="role" class="ov"></div>
+<div id="sbo" class="ov" hidden style="font:14px sans-serif"><div class="card"><b style="font-size:20px">Scoreboard</b><div id="sbt" class="tbl"></div><button class="ghost" data-act="sb">Close</button></div></div>
+<div id="pm" class="ov" hidden><div class="card"><b style="font-size:24px">Paused</b><small>The round keeps running for everyone else.</small><button class="btn" data-act="pause">Resume</button><button class="ghost" data-act="snd">Toggle sound</button><button class="ghost" data-act="leave">Leave room</button></div></div>
+
+<script type="module">
+// ===================== Firebase Setup =====================
+// >>> REPLACE THIS WITH YOUR OWN FIREBASE WEB APP CONFIG <<<
+const firebaseConfig = {
+  apiKey: "AIzaSyAynTzAOEvTrL6NtR5mDCwsSc8USZ9Kdp0",
+  authDomain: "hide-and-seek-e1363.firebaseapp.com",
+  databaseURL: "https://hide-and-seek-e1363-default-rtdb.firebaseio.com",
+  projectId: "hide-and-seek-e1363",
+  storageBucket: "hide-and-seek-e1363.firebasestorage.app",
+  messagingSenderId: "526696547537",
+  appId: "1:526696547537:web:94f8774c13b67b3506b1f0",
+  measurementId: "G-TN1LQKQ9EV"
+};
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,signInAnonymously,setPersistence,browserSessionPersistence} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getDatabase,ref,get,set,update,remove,push,onValue,onChildAdded,onChildChanged,onChildRemoved,onDisconnect,serverTimestamp,runTransaction} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+let THREE;try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js')}catch(e){THREE=await import('https://unpkg.com/three@0.160.0/build/three.module.js')}
+
+const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+let db,auth,uid,code,hostId,status='lobby',settings={},players={},pos={},game={},cur='landing',selCh=0,mode='create';
+let offset=0,unsubs=[],timers=[],localRound=0,raf=0,lastT=0,lastSend=0,needSend=false,me={x:500,y:350},hidden=false,keys={},joy={x:0,y:0};
+let scanAt=0,catchAt=0,hideAt=0,reveal={},obs=[],zones=[],hostGone=0,tk={},sKey='',dt,lastTm='';
+const now=()=>Date.now()+offset, isHost=()=>hostId===uid;
+
+// ===================== Sound =====================
+let AC,snd=true;
+function sfx(t){if(!snd)return;try{AC=AC||new(window.AudioContext||webkitAudioContext)();
+ const q={click:[[600,.05]],join:[[500,.08],[800,.1]],cap:[[300,.1],[150,.25]],scan:[[900,.15],[1300,.15]],role:[[300,.1],[500,.1],[700,.2]],win:[[500,.1],[650,.1],[800,.1],[1000,.3]],lose:[[400,.15],[250,.3]],tick:[[1000,.04]],lock:[[520,.05],[260,.1],[130,.18]],key:[[700,.06],[1000,.06],[1500,.12]]}[t];let a=AC.currentTime;
+ for(const[f,d]of q){const o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.08,a);g.gain.exponentialRampToValueAtTime(.001,a+d);o.connect(g).connect(AC.destination);o.start(a);o.stop(a+d);a+=d}}catch(e){}}
+
+// ===================== UI helpers =====================
+function toast(m,type=''){const e=document.createElement('div');e.className='t '+type;e.textContent=m;$('toasts').appendChild(e);setTimeout(()=>e.remove(),3200)}
+function show(id){document.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on',s.id===id));cur=id}
+
+// ===================== Character System =====================
+const CH=[['Ninja','#ff4d6d','<path d="M14 24h36v8H14z" fill="#111"/><rect x="40" y="26" width="14" height="4" fill="#ff4d6d"/>'],
+['Explorer','#ffb347','<path d="M12 22h40l-6-10H18z" fill="#8a5a2b"/>'],
+['Robot','#9aa7b8','<rect x="29" y="6" width="6" height="10" fill="#9aa7b8"/><circle cx="32" cy="6" r="3" fill="#ff4d6d"/>'],
+['Cyberpunk','#ff2bd6','<path d="M20 18l6-10 6 10 6-10 6 10z" fill="#00e5ff"/>'],
+['Samurai','#c0392b','<path d="M10 24L32 6l22 18z" fill="#333"/>'],
+['Hacker','#39ff14','<path d="M14 36Q14 12 32 12Q50 12 50 36L44 28H20z" fill="#111"/>'],
+['Detective','#c9a66b','<path d="M12 22h40M20 22V12h24v10" stroke="#5a3e1b" stroke-width="5" fill="#7a5a2c"/>'],
+['Adventurer','#4dd0e1','<rect x="14" y="20" width="36" height="5" fill="#e53935"/><rect x="22" y="10" width="20" height="10" fill="#e53935"/>'],
+['Shadow','#6a5acd','<circle cx="32" cy="32" r="30" fill="#000" opacity=".3"/>'],
+['Scientist','#e0f7fa','<rect x="18" y="30" width="12" height="9" rx="3" fill="none" stroke="#333" stroke-width="2"/><rect x="34" y="30" width="12" height="9" rx="3" fill="none" stroke="#333" stroke-width="2"/>'],
+['Soldier','#7cb342','<path d="M14 26Q32 2 50 26z" fill="#33691e"/>'],
+['Alien','#7cff6b','<path d="M24 14l-8-8M40 14l8-8" stroke="#7cff6b" stroke-width="3"/><circle cx="16" cy="6" r="3" fill="#7cff6b"/><circle cx="48" cy="6" r="3" fill="#7cff6b"/>']];
+const chIn=i=>{const[,c,a]=CH[i]||CH[0];return`<rect x="18" y="40" width="28" height="20" rx="9" fill="${c}"/><circle cx="32" cy="30" r="17" fill="${c}"/><ellipse cx="26" cy="22" rx="7" ry="4" fill="#fff" opacity=".25"/><circle cx="26" cy="34" r="3.5" fill="#fff"/><circle cx="38" cy="34" r="3.5" fill="#fff"/><circle cx="27" cy="34" r="1.8" fill="#111"/><circle cx="39" cy="34" r="1.8" fill="#111"/>${a}`};
+const chSvg=(i,s)=>`<svg width="${s}" height="${s}" viewBox="0 0 64 64">${chIn(i)}</svg>`;
+function buildGrids(){const h=CH.map((c,i)=>`<button data-ch="${i}" title="${c[0]}">${chSvg(i,44)}</button>`).join('');
+ $('cg').innerHTML=h;$('lcg').innerHTML=h;hlChars()}
+function hlChars(){const my=players[uid]?cur==='lobby'?players[uid].ch:selCh:selCh;
+ document.querySelectorAll('.cgrid button').forEach(b=>b.classList.toggle('sel',+b.dataset.ch===(b.parentNode.id==='lcg'?my:selCh)));
+ $('prev').innerHTML=chSvg(selCh,90)+`<b style="align-self:center;margin-left:8px">${CH[selCh][0]}</b>`}
+
+// ===================== Map System =====================
+const MAPS=[{n:'Neon City',bg:'#0b1026',ob:'#1b2a6b',st:'#00e5ff',hz:'#ff4d6d',ic:'🚗',seed:3,style:'neon',sky:'#7f9cff',cnt:14,rx:4,gs:60,dc:'💡'},
+{n:'Haunted Mansion',bg:'#17101f',ob:'#3a2442',st:'#b36bff',hz:'#7cff6b',ic:'🪑',seed:7,style:'mansion',sky:'#9a6bff',cnt:16,rx:2,gs:50,dc:'🕯️'},
+{n:'Forest',bg:'#0c2415',ob:'#1d5a2a',st:'#7cff6b',hz:'#2fae4f',ic:'🌲',seed:11,style:'forest',sky:'#bfe8b0',cnt:18,rx:30,gs:80,dc:'🍃'},
+{n:'School',bg:'#1b2230',ob:'#3d4b66',st:'#ffd24d',hz:'#ff9f43',ic:'📚',seed:19,style:'school',sky:'#fff2cf',cnt:15,rx:2,gs:40,dc:'✏️'},
+{n:'Cyber Arena',bg:'#06131a',ob:'#0e4458',st:'#00ffa6',hz:'#ff4d6d',ic:'⚡',seed:23,style:'arena',sky:'#7affe0',cnt:12,rx:12,gs:70,dc:'🔷'}];
+const rng=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+function genMap(m,idx){const r=rng(m.seed*977+idx),o=[],z=[];let n=0;
+ while(o.length<m.cnt&&n++<500){const w=60+(r()*6|0)*20,h=50+(r()*5|0)*20,x=(r()*(1000-w-60)+30)/20|0,y=(r()*(700-h-60)+30)/20|0,X=x*20,Y=y*20;
+  if(X<570&&X+w>430&&Y<420&&Y+h>280)continue;
+  if(o.some(b=>X<b.x+b.w+56&&X+w+56>b.x&&Y<b.y+b.h+56&&Y+h+56>b.y))continue;o.push({x:X,y:Y,w,h})}
+ n=0;while(z.length<10&&n++<800){const x=40+r()*920|0,y=40+r()*620|0;
+  if(o.some(b=>x>b.x-46&&x<b.x+b.w+46&&y>b.y-46&&y<b.y+b.h+46)||z.some(q=>Math.hypot(q.x-x,q.y-y)<110)||Math.hypot(x-500,y-350)<90)continue;z.push({x,y,r:36})}
+ return{o,z,r}}
+function buildMap(){const idx=settings.map|0,m=MAPS[idx],g=genMap(m,idx),r=g.r,ST=m.st;obs=g.o;zones=game.mode==='lock'?[]:g.z;
+ if(world){scene.remove(world);world.traverse(o=>{o.geometry?.dispose();o.material?.map?.dispose();o.material?.dispose()})}
+ world=new THREE.Group();zoneA=[];scene.background=new THREE.Color(m.bg).multiplyScalar(.7);scene.fog=new THREE.Fog(scene.background,650,1350);hemi.color.set(m.sky);hemi.groundColor.set(m.bg);
+ const M=(c,o)=>new THREE.MeshStandardMaterial({color:c,roughness:.55,metalness:.1,...o}),B=(w,h,d,mt,x,y,z,p)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mt);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;(p||world).add(o);return o};
+ const c=document.createElement('canvas');c.width=c.height=128;const cx=c.getContext('2d');cx.fillStyle=m.bg;cx.fillRect(0,0,128,128);cx.strokeStyle=ST;cx.globalAlpha=.3;cx.lineWidth=3;cx.strokeRect(0,0,128,128);
+ const tx=new THREE.CanvasTexture(c);tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(1000/m.gs,700/m.gs);tx.colorSpace=THREE.SRGBColorSpace;tx.anisotropy=8;
+ const fl=new THREE.Mesh(new THREE.PlaneGeometry(1000,700),new THREE.MeshStandardMaterial({map:tx,roughness:.9}));fl.rotation.x=-Math.PI/2;fl.position.set(500,0,350);fl.receiveShadow=true;world.add(fl);
+ const gn=new THREE.Mesh(new THREE.PlaneGeometry(6000,6000),new THREE.MeshBasicMaterial({color:scene.background}));gn.rotation.x=-Math.PI/2;gn.position.set(500,-1,350);world.add(gn);
+ const wm=M(m.ob,{emissive:ST,emissiveIntensity:.5});[[500,-7,1028,14],[500,707,1028,14],[-7,350,14,700],[1007,350,14,700]].forEach(([x,z,w,d])=>B(w,26,d,wm,x,13,z));
+ obs.forEach(b=>{const G=new THREE.Group(),st=m.style,mx=Math.max(b.w,b.h),h=st==='arena'?28+r()*20|0:45+r()*50|0;G.position.set(b.x+b.w/2,0,b.y+b.h/2);world.add(G);
+  if(st==='forest'){B(10,26,10,M('#5a3a1a'),0,13,0,G);[[1,34,26],[.75,30,50],[.5,26,70]].forEach(([k,ch,y],i)=>{const o=new THREE.Mesh(new THREE.ConeGeometry(mx*.55*k,ch,9),M(i%2?m.hz:m.ob,{flatShading:true}));o.scale.set(b.w/mx,1,b.h/mx);o.position.y=y;o.castShadow=true;G.add(o)});return}
+  B(b.w,h,b.h,M(m.ob,{emissive:ST,emissiveIntensity:.06}),0,h/2,0,G);
+  if(st==='mansion'||st==='school'){const o=new THREE.Mesh(new THREE.ConeGeometry(.7071,1,4).rotateY(Math.PI/4),M(st==='school'?ST:'#241530'));o.scale.set(b.w*1.1,30,b.h*1.1);o.position.y=h+15;o.castShadow=true;G.add(o)}
+  const gl=new THREE.MeshBasicMaterial({color:ST});B(b.w+1.5,2.5,b.h+1.5,gl,0,h*.62,0,G);B(b.w+1.5,2.5,b.h+1.5,gl,0,h-2,0,G)});
+ zones.forEach(z=>{const G=new THREE.Group();G.position.set(z.x,0,z.y);world.add(G);
+  const mk=(geo,op,y)=>{const o=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:m.hz,transparent:true,opacity:op,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));o.position.y=y;G.add(o);return o};
+  const d=mk(new THREE.CircleGeometry(z.r,40),.3,.6),ring=mk(new THREE.RingGeometry(z.r-3,z.r,48),.95,.8),beam=mk(new THREE.CylinderGeometry(z.r*.8,z.r*.8,90,24,1,true),.12,45);d.rotation.x=ring.rotation.x=-Math.PI/2;
+  const cs=document.createElement('canvas');cs.width=cs.height=96;const q=cs.getContext('2d');q.font='64px serif';q.textAlign='center';q.textBaseline='middle';q.fillText(m.ic,48,52);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cs),transparent:true}));sp.scale.set(34,34,1);sp.position.y=60;G.add(sp);zoneA.push({ring,sp,beam,ph:Math.random()*6})});
+ scene.add(world);
+ $('mmb').innerHTML=`<rect width="1000" height="700" fill="${m.bg}"/>`+obs.map(b=>`<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="${ST}" opacity=".55"/>`).join('')+zones.map(z=>`<circle cx="${z.x}" cy="${z.y}" r="30" fill="${m.hz}" opacity=".5"/>`).join('')}
+const blocked=(x,y)=>x<14||y<14||x>986||y>686||obs.some(b=>{const cx=Math.max(b.x,Math.min(x,b.x+b.w)),cy=Math.max(b.y,Math.min(y,b.y+b.h));return Math.hypot(x-cx,y-cy)<12});
+function freeSpot(far){for(let i=0;i<200;i++){const x=40+Math.random()*920,y=40+Math.random()*620;if(!blocked(x,y)&&(!far||Math.hypot(x-500,y-350)>250))return{x:x|0,y:y|0}}return{x:60,y:60}}
+
+// ===================== Settings UI =====================
+const F=[['mode','Game',[['hide','Hide & Seek'],['lock','Lock & Key']]],['map','Map',MAPS.map((m,i)=>[i,m.n])],['max','Max players',[2,4,6,8,10].map(v=>[v,v])],['hide','Hide / head start (s)',[10,20,30,45].map(v=>[v,v])],['seek','Seek / chase time (s)',[60,90,120,180,240].map(v=>[v,v])],['diff','Difficulty',[['easy','Easy'],['normal','Normal'],['hard','Hard']]],['pub','Visibility',[[0,'Private'],[1,'Public']]]];
+const S0={mode:'hide',map:0,max:6,hide:20,seek:120,diff:'normal',pub:0};
+const sgHTML=(s,dis)=>F.map(([k,l,o])=>`<label>${l}<select data-k="${k}" ${dis?'disabled':''}>${o.map(([v,t])=>`<option value="${v}" ${String(s[k])===String(v)?'selected':''}>${t}</option>`).join('')}</select></label>`).join('');
+const readSG=root=>{const s={};root.querySelectorAll('select').forEach(e=>s[e.dataset.k]=['diff','mode'].includes(e.dataset.k)?e.value:+e.value);return s};
+function renderSettings(){if(cur!=='lobby')return;const k=JSON.stringify(settings)+isHost();if(k===sKey)return;sKey=k;$('ls').innerHTML=sgHTML(settings,!isHost())}
+
+// ===================== Room Management =====================
+const cleanName=v=>v.replace(/[<>]/g,'').trim().slice(0,14);
+const newPlayer=n=>({name:n,ch:selCh,ready:false,online:true,hidden:false,x:500,y:350,joinedAt:serverTimestamp()});
+async function submit(){
+ const name=cleanName($('nm').value);if(name.length<2)return toast('Enter a name (2–14 characters)','err');
+ if(!(selCh>=0&&selCh<CH.length))return toast('Pick a character','err');
+ try{
+  if(mode==='create'){
+   let c,ok=false;for(let i=0;i<6&&!ok;i++){c=Array.from({length:6},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.random()*32|0]).join('');ok=!(await get(ref(db,'rooms/'+c))).exists()}
+   await set(ref(db,'rooms/'+c),{hostId:uid,status:'lobby',settings:readSG($('cs')),createdAt:serverTimestamp(),players:{[uid]:newPlayer(name)}});
+   toast('Room created successfully 🎉');enter(c);
+  }else{
+   const c=$('rcode').value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(c))return toast('Room codes have 6 letters or digits','err');
+   const s=await get(ref(db,'rooms/'+c));if(!s.exists())return toast('No room with that code','err');
+   const r=s.val(),ps=r.players||{};
+   if(!ps[uid]){
+    if(r.status!=='lobby')return toast('That game already started','err');
+    if(Object.keys(ps).length>=(r.settings?.max||6))return toast('Room is full','err');
+    if(Object.values(ps).some(p=>p.name.toLowerCase()===name.toLowerCase()))return toast('That name is taken in this room','err');
+    await set(ref(db,`rooms/${c}/players/${uid}`),newPlayer(name));
+   }
+   enter(c);
+  }
+ }catch(e){toast('Connection problem: '+(e.code||e.message),'err')}
+}
+function on(path,cb){unsubs.push(onValue(ref(db,`rooms/${code}/${path}`),s=>cb(s.val())))}
+function enter(c){
+ code=c;players={};pos={};game={};status='lobby';localRound=0;sKey='';tk={};
+ const base=`rooms/${c}/`,pr=ref(db,base+'players'),put=s=>{const v=s.val(),o=players[s.key];if(o&&s.key!==uid){if(o.x!==v.x||o.y!==v.y)lastMove[s.key]=Date.now();if(o.hidden&&!v.hidden&&game.phase==='seek'&&uid===game.seekerId){lastMove[s.key]=Date.now();toast('👀 A hider left their hiding spot!','warn');sfx('scan');burst(v.x,v.y,'#ffb347')}}players[s.key]=v;if(!pos[s.key])pos[s.key]={x:v.x??500,y:v.y??350};dirty()};
+ on('hostId',v=>{hostId=v;sync();renderLobby()});
+ on('status',v=>{status=v||'lobby';sync()});
+ on('settings',v=>{settings=v||S0;renderSettings()});
+ on('game',onGame);
+ unsubs.push(onChildAdded(pr,put),onChildChanged(pr,put),onChildRemoved(pr,s=>{delete players[s.key];delete pos[s.key];dirty()}));
+ // presence
+ unsubs.push(onValue(ref(db,'.info/connected'),s=>{if(s.val()&&players[uid]!==undefined||s.val()){const p=ref(db,base+'players/'+uid);get(p).then(x=>{if(x.exists()){update(p,{online:true});onDisconnect(p).update({online:false,seen:serverTimestamp()});if(code&&players[uid]&&!navigator.onLine===false)toast('Connected 🟢')}})}else toast('Connection lost — reconnecting…','warn')}));
+ unsubs.push(onValue(ref(db,'.info/serverTimeOffset'),s=>offset=s.val()||0));
+ unsubs.push(onChildAdded(ref(db,base+'events'),handleEvent));
+ timers.push(setInterval(tick,150));
+ show('lobby');sfx('join');
+}
+function leaveRoom(){
+ const c=code;if(!c)return;const others=Object.keys(players).filter(i=>i!==uid);
+ unsubs.forEach(u=>u());unsubs=[];timers.forEach(clearInterval);timers=[];cancelAnimationFrame(raf);
+ const p=ref(db,`rooms/${c}/players/${uid}`);onDisconnect(p).cancel();
+ if(!others.length)remove(ref(db,'rooms/'+c));
+ else{if(hostId===uid){const n=others.find(i=>players[i].online)||others[0];set(ref(db,`rooms/${c}/hostId`),n)}remove(p)}
+ code=null;players={};pos={};game={};hidden=false;clearTk();tk={};show('landing');
+}
+function setSetting(k,v){if(!isHost())return;if(k==='max'&&v<Object.keys(players).length)return toast('More players than that are already in','err');update(ref(db,`rooms/${code}/settings`),{[k]:v})}
+
+// ===================== Lobby =====================
+const ids=()=>Object.keys(players).sort((a,b)=>(players[a].joinedAt||9e15)-(players[b].joinedAt||9e15));
+function dirty(){clearTimeout(dt);dt=setTimeout(renderLobby,60)}
+function renderLobby(){if(cur!=='lobby'||!code)return;$('rc').textContent=code;
+ $('plist').innerHTML=ids().map(i=>{const p=players[i],h=i===hostId,r=h||p.ready;return`<div class="pl"><span>${chSvg(p.ch,40)}</span><b>${esc(p.name)}${i===uid?' (you)':''}</b>${h?'<i class="host">👑 HOST</i>':''}<span>${p.online?'🟢':'🔴'}</span><em class="${r?'rd':'nr'}">${r?'READY':'NOT READY'}</em></div>`}).join('');
+ const on=ids().filter(i=>players[i].online),ok=on.length>=2;
+ $('st').style.display=isHost()?'':'none';$('st').disabled=!ok;$('st').textContent=ok?'Start game':'Waiting for 1+ more player';
+ $('rdy').style.display=isHost()?'none':'';$('rdy').textContent=players[uid]?.ready?'Not ready':'Ready';
+ hlChars();renderSettings()}
+
+// ===================== Game State (host authoritative) =====================
+async function startRound(){
+ if(!isHost())return;const on=ids().filter(i=>players[i].online);if(on.length<2)return toast('Need at least 2 players','err');
+ const seeks=game.seeks||{},pool=on.length>2?on.filter(i=>i!==game.seekerId):on,sk=pool[Math.random()*pool.length|0],t=now();
+ await remove(ref(db,`rooms/${code}/events`));
+ await set(ref(db,`rooms/${code}/game`),{round:(game.round||0)+1,mode:settings.mode||'hide',phase:'hide',seekerId:sk,startAt:t,phaseEnd:t+settings.hide*1000,seeks:{...seeks,[sk]:(seeks[sk]||0)+1},totals:game.totals||{}});
+ await set(ref(db,`rooms/${code}/status`),'playing');
+}
+function endRound(w){
+ if(game.phase==='end')return;const LK=game.mode==='lock',st=game.st||{},fr=game.frees||{},cap=game.captured||{},tot={...(game.totals||{})},rs={},dur=settings.seek,hid=ids().filter(i=>i!==game.seekerId);
+ hid.forEach(i=>{const s=cap[i]!=null?cap[i]:dur,pts=s*2+(cap[i]!=null?0:150)+(w==='hiders'&&cap[i]==null?100:0)+(LK?(fr[i]||0)*75:0);rs[i]={n:players[i].name,r:LK?'Runner':'Hider',v:s+'s'+(LK&&fr[i]?' · '+fr[i]+' freed':''),p:pts};tot[i]=(tot[i]||0)+pts});
+ const sk=game.seekerId,nc=Object.keys(cap).length,nl=Object.keys(st).length;
+ if(players[sk]){const pts=(LK?nl*60+nc*100:nc*100)+(w==='seeker'?200:0);rs[sk]={n:players[sk].name,r:LK?'Catcher':'Seeker',v:LK?nl+' locked, '+nc+' out':nc+' caught',p:pts};tot[sk]=(tot[sk]||0)+pts}
+ update(ref(db,`rooms/${code}/game`),{phase:'end',winner:w,rs,totals:tot});
+}
+function tick(){
+ const t=now(),h=players[hostId];
+ if(!h||!h.online){if(!hostGone)hostGone=t;else if(t-hostGone>4000){const c=ids().find(i=>players[i].online);if(c===uid)runTransaction(ref(db,`rooms/${code}/hostId`),v=>v===hostId?uid:undefined).then(r=>{if(r.committed){hostGone=0;toast('You are now the host 👑')}}).catch(()=>{})}}else hostGone=0;
+ if(isHost()){
+  if(status==='lobby')ids().forEach(i=>{const p=players[i];if(!p.online&&p.seen&&t-p.seen>30000)remove(ref(db,`rooms/${code}/players/${i}`))});
+  if(status==='playing'&&game.phase&&game.phase!=='end'){
+   if(game.phase==='hide'&&t>=game.phaseEnd)update(ref(db,`rooms/${code}/game`),{phase:'seek',seekStart:t,phaseEnd:t+settings.seek*1000});
+   else if(game.phase==='seek'){checkEnd();if(game.phase==='seek'&&t>=game.phaseEnd)endRound('hiders')}}}
+ if(!$('sbo').hidden)renderSB();
+}
+function handleEvent(s){const e=s.val();if(!e||!isHost())return;remove(s.ref);
+ if(game.phase!=='seek'||now()-e.t>8000)return;
+ const tg=players[e.target],by=players[e.by],cap=game.captured||{},st=game.st||{},LK=game.mode==='lock',g=ref(db,`rooms/${code}/game`);
+ if(!tg||!by||e.target===e.by||cap[e.target]!=null)return;
+ const d=dist(tg,by);
+ if(e.type==='catch'&&e.by===game.seekerId){
+  if(LK){ // Lock & Key: 1st catch = locked, caught again after being freed = out
+   if(st[e.target]==='L1'||(game.imm?.[e.target]||0)>now()||d>44*1.8+30)return;
+   const out=st[e.target]==='F1',u={['st/'+e.target]:out?'OUT':'L1',ev:{id:s.key,text:out?`❌ ${by.name} caught ${tg.name} again — OUT!`:`🔒 ${by.name} locked ${tg.name}!`,t:e.target}};
+   if(out)u['captured/'+e.target]=Math.round((now()-game.seekStart)/1000);
+   update(g,u);
+  }else{
+   if(d>(tg.hidden?28:44)*1.8+30)return; // server-side distance check (lag tolerant)
+   update(g,{['captured/'+e.target]:Math.round((now()-game.seekStart)/1000),ev:{id:s.key,text:`🔎 ${by.name} captured ${tg.name}!`,t:e.target}});
+  }
+ }else if(e.type==='free'&&LK&&e.by!==game.seekerId&&st[e.by]!=='L1'&&cap[e.by]==null&&st[e.target]==='L1'&&d<=44*1.8+30){
+  update(g,{['st/'+e.target]:'F1',['imm/'+e.target]:now()+FREE_IMM,['frees/'+e.by]:(game.frees?.[e.by]||0)+1,ev:{id:s.key,text:`🔑 ${by.name} freed ${tg.name}! Run!`,t:e.target,c:'#7cff6b'}});
+ }
+}
+function onGame(v){const p=game,g=v||{};game=g;
+ if(g.ev&&p.round===g.round&&g.ev.id!==p.ev?.id){toast(g.ev.text);sfx(g.ev.k==='free'?'key':g.ev.k==='lock'?'lock':'cap');const q=pos[g.ev.t];if(q&&cur==='game')burst(q.x,q.y,g.ev.c||'#ff4d6d');shake=.8;if(g.ev.t===uid||g.ev.id)navigator.vibrate?.(40)}
+ if(p.round===g.round&&p.phase==='hide'&&g.phase==='seek')toast(g.mode==='lock'?'🔒 The chase begins!':'🔎 The hunt begins!');
+ sync();if(isHost())checkEnd()}
+function sync(){if(!code)return;
+ if(status==='lobby'){if(cur==='game'||cur==='result'){cancelAnimationFrame(raf);clearTk();tk={};localRound=0;show('lobby');renderLobby()}return}
+ if(status==='playing'&&game.round){
+  if(game.phase==='end'){if(cur!=='result'){localRound=game.round;showResult()}}
+  else if(game.round!==localRound)beginRound()}}
+function roleBanner(sk){ // random-pick animation, then the real role
+ const LK=game.mode==='lock',r=$('role'),names=ids().map(i=>players[i].name),A=LK?'CATCHER':'SEEKER';let n=Math.random()*names.length|0;
+ r.className='ov show';r.innerHTML=`<div>PICKING THE ${A}…<small id="rp" style="font:30px Bungee,Impact,sans-serif;color:#ffd24d"></small></div>`;
+ const iv=setInterval(()=>{const e=$('rp');if(e)e.textContent=names[n++%names.length];sfx('tick')},90);
+ setTimeout(()=>{clearInterval(iv);r.className='ov show '+(sk?'sk':'hd');
+  r.innerHTML=`<div>${sk?(LK?'YOU ARE THE CATCHER 🔒':'YOU ARE THE SEEKER 🔎'):(LK?'YOU ARE A RUNNER 🏃':'YOU ARE A HIDER 👤')}<small>${LK?(sk?'Frozen during the head start. Then touch runners to lock them — touch a freed runner again and they are out!':'Run! Stand next to a locked friend to free them with the key. Caught twice = out.'):(sk?'Eyes closed while they hide. Then get close to a hider to catch them.':'Reach a glowing hiding spot and press HIDE.')}<br><b style="color:#ffd24d">${esc(players[game.seekerId]?.name||'')} is the ${A.toLowerCase()}</b></small></div>`;
+  sfx('role');setTimeout(()=>r.className='ov',2200)},1300)}
+function beginRound(){
+ localRound=game.round;hidden=false;scanAt=0;reveal={};buildMap();
+ const sk=game.seekerId===uid,sp=sk?{x:500,y:350}:freeSpot(true);me.x=sp.x;me.y=sp.y;cam.x=me.x;cam.y=me.y;
+ update(ref(db,`rooms/${code}/players/${uid}`),{x:me.x,y:me.y,hidden:false});
+ pos={};ids().forEach(i=>pos[i]={x:players[i].x??500,y:players[i].y??350});pos[uid]=me;
+ clearTk();tk={};show('game');$('sbo').hidden=true;$('pm').hidden=true;
+ const LK=game.mode==='lock';roleBanner(sk);
+ $('blind').innerHTML=LK?'<div>FROZEN ⏳<small>Runners get a head start. You move when the timer hits zero.</small></div>':'<div>EYES CLOSED 🙈<small>Hiders are hiding… you move when the timer hits zero.</small></div>';
+ $('spec').innerHTML=`<div>${LK?'YOU ARE OUT ❌':"YOU'VE BEEN CAPTURED"}<small>Spectating — watch the round play out.</small></div>`;
+ $('bc').hidden=true;$('bs').hidden=!sk||LK;$('bh').hidden=sk||LK;
+ cancelAnimationFrame(raf);lastT=performance.now();raf=requestAnimationFrame(frame);
+}
+
+// ===================== Game Loop: movement, sync, render =====================
+const SP={easy:150,normal:175,hard:200},CD={easy:16,normal:12,hard:9},lastMove={},VIS=230,cam={x:500,y:350},K={catch:50,hid:32,rev:44,key:52},FREE_IMM=1500,lastHit={};
+let mmT=0,lastTip='',shake=0,zoom=1,VW=1,VH=1,world,zoneA=[];
+// ---- Three.js scene
+const touch=matchMedia('(pointer:coarse)').matches,R=new THREE.WebGLRenderer({canvas:$('bd'),antialias:true,powerPreference:'high-performance'}),scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(50,1,5,3000),hemi=new THREE.HemisphereLight('#bfd8ff','#101428',1.4),sun=new THREE.DirectionalLight('#fff',2.2);
+R.setPixelRatio(Math.min(devicePixelRatio||1,touch?1.75:2));R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.15;
+sun.castShadow=true;sun.shadow.mapSize.set(touch?1024:2048,touch?1024:2048);Object.assign(sun.shadow.camera,{left:-340,right:340,top:340,bottom:-340,near:10,far:1000});sun.shadow.bias=-.0006;scene.add(hemi,sun,sun.target);
+function resize(){const c=$('bd'),w=c.clientWidth,h=c.clientHeight;if(!w||!h)return;VW=w;VH=h;R.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+const GEO={cap:new THREE.CapsuleGeometry(10.5,12,6,14),eye:new THREE.SphereGeometry(3.4,10,8),pup:new THREE.SphereGeometry(1.8,8,6),ring:new THREE.RingGeometry(.85,1,48),sp:new THREE.SphereGeometry(2.2,6,6),pr:new THREE.RingGeometry(14,17.5,32).rotateX(-Math.PI/2)};
+function makeTok(p){const col=new THREE.Color((CH[p.ch]||CH[0])[1]),g=new THREE.Group(),bd=new THREE.Group(),mats=[];
+ const M=(c,o)=>{const m=new THREE.MeshStandardMaterial({color:c,roughness:.5,...o});mats.push(m);return m},add=(geo,mt,x,y,z)=>{const o=new THREE.Mesh(geo,mt);o.position.set(x,y,z);o.castShadow=true;bd.add(o);return o};
+ add(GEO.cap,M(col,{emissive:col,emissiveIntensity:.15}),0,16.5,0);
+ [-1,1].forEach(s=>{add(GEO.eye,M('#fff'),s*4.6,24,8.4);add(GEO.pup,M('#111'),s*4.6,24,11.4)});
+ const A=(geo,c,x,y,z,rx,rz)=>{const o=add(geo,M(c),x,y,z);if(rx)o.rotation.x=rx;if(rz)o.rotation.z=rz;return o},Cy=(a,b,h)=>new THREE.CylinderGeometry(a,b,h,14),Co=(r,h,n)=>new THREE.ConeGeometry(r,h,n||14),To=(r,t)=>new THREE.TorusGeometry(r,t,8,20),Hs=r=>new THREE.SphereGeometry(r,14,8,0,6.2832,0,1.25),Sp=r=>new THREE.SphereGeometry(r,8,6);
+ switch(p.ch|0){
+ case 0:A(To(10.6,2.2),'#111',0,27,0,1.5708);A(new THREE.BoxGeometry(3,3,9),'#ff4d6d',3,26,-12);break;
+ case 1:A(Cy(14,14,1.6),'#8a5a2b',0,32,0);A(Cy(8,8,7),'#a8702f',0,36,0);break;
+ case 2:A(Cy(1,1,9),'#9aa7b8',0,37,0);A(Sp(2.6),'#ff4d6d',0,42,0);break;
+ case 3:[-5,0,5].forEach((x,i)=>A(Co(2.6,11,5),'#00e5ff',x,36+(i==1)*2,0,0,-x*.06));break;
+ case 4:A(Co(15,11),'#333',0,37,0);break;
+ case 5:A(Hs(11.5),'#111',0,23.5,0);break;
+ case 6:A(Cy(13,13,1.2),'#5a3e1b',0,31.5,0);A(Cy(8,8,8),'#7a5a2c',0,36,0);break;
+ case 7:A(Hs(11.3),'#e53935',0,23.5,0);A(new THREE.BoxGeometry(14,1.5,8),'#e53935',0,29,11);break;
+ case 8:{const o=A(new THREE.SphereGeometry(17,14,10),'#6a5acd',0,17,0);o.material.userData.b=.2;o.castShadow=false;break}
+ case 9:[-1,1].forEach(s=>A(To(3.8,.7),'#222',s*4.7,24,11));break;
+ case 10:A(Hs(11.8),'#33691e',0,23.5,0);break;
+ default:[-1,1].forEach(s=>{A(Cy(.9,.9,10),'#7cff6b',s*5,38,0,0,-s*.3);A(Sp(2.4),'#7cff6b',s*8,43,0)})}
+ const cvs=document.createElement('canvas');cvs.width=256;cvs.height=64;const q=cvs.getContext('2d');q.font='700 30px Fredoka,sans-serif';q.textAlign='center';q.textBaseline='middle';q.lineWidth=7;q.strokeStyle='#000c';q.strokeText(p.name,128,34);q.fillStyle='#fff';q.fillText(p.name,128,34);
+ const lab=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cvs),transparent:true,depthTest:false}));lab.scale.set(56,14,1);lab.position.y=58;lab.renderOrder=9;g.add(lab);
+ const ring=new THREE.Mesh(GEO.pr,new THREE.MeshBasicMaterial({transparent:true,depthWrite:false}));ring.position.y=.9;g.add(ring);
+ const cage=new THREE.Group(),cm=new THREE.MeshBasicMaterial({color:'#ff9f43'});for(let i=0;i<8;i++){const b=new THREE.Mesh(new THREE.CylinderGeometry(.9,.9,44,5),cm),a=i/8*6.2832;b.position.set(Math.cos(a)*16,22,Math.sin(a)*16);cage.add(b)}
+ const top=new THREE.Mesh(new THREE.CylinderGeometry(16,16,2,16),cm);top.position.y=44;cage.add(top);cage.visible=false;g.add(cage,bd);
+ Object.assign(g,{_b:bd,_m:mats,_lab:lab,_ring:ring,_cage:cage,_px:p.x??0,_py:p.y??0,_sp:0,_ry:0,_o:-1});scene.add(g);return g}
+function setOp(g,o){if(g._o===o)return;g._o=o;g.visible=o>.02;g._m.forEach(m=>{m.transparent=o<.99||!!m.userData.b;m.opacity=o*(m.userData.b||1)});g._lab.material.opacity=Math.min(1,o*1.3)}
+function clearTk(){for(const i in tk){scene.remove(tk[i]);tk[i].traverse(o=>{if(o.geometry&&!Object.values(GEO).includes(o.geometry))o.geometry.dispose();o.material?.map?.dispose();o.material?.dispose()})}tk={}}
+// ---- Frame loop: input -> movement -> network -> render
+function frame(ts){
+ raf=requestAnimationFrame(frame);const dt=Math.min(.05,(ts-lastT)/1000||0);lastT=ts;
+ const t=now(),ph=game.phase,iAm=uid===game.seekerId,cap=game.captured||{},dead=cap[uid]!=null,LK=game.mode==='lock',st=game.st||{},lockedMe=LK&&st[uid]==='L1';
+ if(!ph)return;
+ let dx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+joy.x,dy=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0)+joy.y;
+ const l=Math.hypot(dx,dy);if(l>1){dx/=l;dy/=l}
+ if(l>.05&&!hidden&&!dead&&!lockedMe&&ph!=='end'&&!(iAm&&ph==='hide')){const v=(iAm?SP[settings.diff]||175:180)*dt;if(!blocked(me.x+dx*v,me.y))me.x+=dx*v;if(!blocked(me.x,me.y+dy*v))me.y+=dy*v;needSend=true}
+ if(needSend&&ts-lastSend>40){lastSend=ts;needSend=false;update(ref(db,`rooms/${code}/players/${uid}`),{x:Math.round(me.x),y:Math.round(me.y)})} // ~25 updates/s
+ if(ph==='seek'&&!dead&&!lockedMe){if(iAm)act('catch',true);else if(LK)act('hide',true)} // auto catch / auto key, every frame
+ const list=ids(),vis=[];
+ for(const i in tk)if(!players[i]){scene.remove(tk[i]);delete tk[i]}
+ list.forEach(i=>{const p=players[i],g=tk[i]||(tk[i]=makeTok(p)),q=pos[i]||(pos[i]={x:p.x,y:p.y});
+  if(i!==uid){const k=Math.min(1,dt*16);q.x+=((p.x??q.x)-q.x)*k;q.y+=((p.y??q.y)-q.y)*k}
+  const isSk=i===game.seekerId,cd=cap[i]!=null;let o=1,rv=false;
+  if(i===uid)o=hidden?.5:1;else if(cd)o=dead?.5:.2;else if(p.hidden)o=iAm?((reveal[i]||0)>Date.now()?.9:0):.45;
+  else if(iAm&&!LK){const mv=Date.now()-(lastMove[i]||0)<2500;rv=mv;if(!mv&&dist(me,q)>VIS)o=0}
+  if(LK&&(game.imm?.[i]||0)>t)o*=.6;if(!p.online)o*=.5;
+  setOp(g,o);g.position.set(q.x,0,q.y);
+  const vx=q.x-g._px,vz=q.y-g._py;g._px=q.x;g._py=q.y;g._sp+=((dt>0?Math.hypot(vx,vz)/dt:0)-g._sp)*.25;
+  if(g._sp>25){let d=Math.atan2(vx,vz)-g._ry;d=Math.atan2(Math.sin(d),Math.cos(d));g._ry+=d*Math.min(1,dt*14);g.rotation.y=g._ry}
+  g._b.position.y=g._sp>25?Math.abs(Math.sin(ts*.014))*3.5:Math.sin(ts*.003+q.x)*.6;
+  const rc=isSk?'#ff4d6d':i===uid?'#00e5ff':rv?'#ffb347':null;g._ring.visible=!!rc;if(rc)g._ring.material.color.set(rc);
+  g._cage.visible=LK&&st[i]==='L1';if(o>.5)vis.push([i,q.x,q.y,isSk])});
+ // chase camera
+ cam.x+=(me.x-cam.x)*Math.min(1,dt*10);cam.y+=(me.y-cam.y)*Math.min(1,dt*10);
+ const k=Math.min(1.55,Math.max(1,1.1/(VW/VH)))*zoom,cx_=Math.max(130,Math.min(870,cam.x)),tz=Math.max(90,Math.min(610,cam.y));shake*=.9;
+ camera.position.set(cx_+(Math.random()-.5)*shake*8,300*k,tz+175*k+(Math.random()-.5)*shake*8);camera.lookAt(cx_,0,tz);
+ sun.position.set(cx_-170,420,tz+110);sun.target.position.set(cx_,0,tz);
+ const s=ts/1000;zoneA.forEach(z=>{const p=1+Math.sin(s*2+z.ph)*.05;z.ring.scale.set(p,p,1);z.sp.position.y=60+Math.sin(s*2.2+z.ph)*4;z.beam.material.opacity=.12+Math.sin(s*2+z.ph)*.04});
+ $('vig').classList.toggle('on',iAm&&ph==='seek'&&!LK); // seeker's limited view
+ stepFx(dt);R.render(scene,camera);
+ if(ts-mmT>120){mmT=ts;$('mmd').innerHTML=vis.map(([i,x,y,s])=>`<circle cx="${x|0}" cy="${y|0}" r="${i===uid?20:15}" fill="${s?'#ff4d6d':i===uid?'#00e5ff':'#ffd24d'}"/>`).join('')}
+ const near=LK?(!iAm&&!dead&&!lockedMe&&ph==='seek'&&list.some(i=>i!==uid&&st[i]==='L1'&&cap[i]==null&&dist(me,pos[i])<=K.key)):(!hidden&&!iAm&&!dead&&zones.some(z=>dist(me,z)<=z.r));$('bh').classList.toggle('glow',near);
+ const tip=dead?'':LK?(lockedMe?'🔒 You are locked! Wait for a runner to free you.':iAm?(ph==='seek'?'Touch a runner to lock them. Touch a freed runner again to knock them out!':''):near?'Stay close to your locked friend — the key frees them automatically!':ph==='hide'?'Head start! Run away from the catcher!':st[uid]==='F1'?'Careful: one more catch and you are out!':''):iAm?(ph==='seek'?'Fog limits your view. Moving hiders are revealed for 2s. Get close to catch them!':''):hidden?'Safe! The seeker cannot see you. Press E / EXIT to leave.':near?'Hiding spot! Press E or tap HIDE.':ph==='seek'&&l>.05?'⚠️ The seeker can see you while you move!':ph==='hide'?'Run to a glowing hiding spot!':'';
+ if(tip!==lastTip){lastTip=tip;$('tip').textContent=tip;$('tip').style.opacity=tip?1:0}
+ // HUD (touch DOM only when text changes)
+ const rem=Math.max(0,Math.ceil(((game.phaseEnd||t)-t)/1000)),tx=ph==='end'?'00:00':String(rem/60|0).padStart(2,'0')+':'+String(rem%60).padStart(2,'0');
+ if(tx!==lastTm){lastTm=tx;$('tm').textContent=tx;$('tm').classList.toggle('warn',rem<=10&&ph!=='end');if(rem<=10&&rem>0)sfx('tick')}
+ const hl=list.filter(i=>i!==game.seekerId&&cap[i]==null&&!(LK&&st[i]==='L1')).length,lab=(ph==='hide'?(t<game.startAt+3000?'PREPARATION':LK?'HEAD START':'HIDING PHASE'):ph==='seek'?(LK?'CHASE':'SEEKING PHASE'):'ROUND END')+(ph==='end'?'':' · '+hl+(LK?' free':' hider'+(hl===1?'':'s')+' left'));if($('ph').textContent!==lab)$('ph').textContent=lab;
+ const rl=dead?(LK?'OUT':'SPECTATOR'):lockedMe?'LOCKED':iAm?(LK?'CATCHER':'SEEKER'):(LK?'RUNNER':'HIDER');if($('rl').textContent!==rl){$('rl').textContent=rl;$('rl').className='chip '+(iAm?'sk':'hd')}
+ $('blind').classList.toggle('show',iAm&&ph==='hide');$('spec').classList.toggle('show',dead&&ph!=='end');
+ const sc=Math.max(0,(CD[settings.diff]||12)-(Date.now()-scanAt)/1000);const sct=iAm?(sc>0?'SCAN '+Math.ceil(sc):'SCAN'):'';if($('bs').textContent!==sct&&iAm)$('bs').textContent=sct;
+ $('bh').textContent=LK?'KEY':hidden?'EXIT':'HIDE';
+}
+const fx=[];
+function burst(x,y,c){const col=new THREE.Color(c),r=new THREE.Mesh(GEO.ring,new THREE.MeshBasicMaterial({color:col,transparent:true,side:THREE.DoubleSide,depthWrite:false}));r.rotation.x=-Math.PI/2;r.position.set(x,2,y);scene.add(r);fx.push({o:r,t:0,d:.7,k:0});
+ for(let i=0;i<14;i++){const a=i/14*6.283,v=70+Math.random()*60,m=new THREE.Mesh(GEO.sp,new THREE.MeshBasicMaterial({color:col,transparent:true}));m.position.set(x,18,y);scene.add(m);fx.push({o:m,t:0,d:.8,k:1,vx:Math.cos(a)*v,vz:Math.sin(a)*v,vy:90+Math.random()*80})}}
+function stepFx(dt){for(let i=fx.length-1;i>=0;i--){const f=fx[i],u=(f.t+=dt)/f.d;if(u>=1){scene.remove(f.o);f.o.material.dispose();fx.splice(i,1);continue}
+ if(!f.k){const s=10+u*110;f.o.scale.set(s,s,1);f.o.material.opacity=.9*(1-u)}else{f.vy-=300*dt;f.o.position.x+=f.vx*dt;f.o.position.z+=f.vz*dt;f.o.position.y=Math.max(1,f.o.position.y+f.vy*dt);f.o.material.opacity=1-u}}}
+
+// ===================== Hider / Seeker actions =====================
+function nearD(i){const p=players[i];return Math.min(dist(me,pos[i]),Math.hypot(me.x-(p.x??1e9),me.y-(p.y??1e9)))}
+// Instant hit: apply + broadcast in ONE direct write (local listeners fire immediately, no host round-trip, no cooldown)
+function hit(type,tg){
+ if(Date.now()-(lastHit[tg]||0)<250)return;lastHit[tg]=Date.now();
+ const g=game,st=g.st||{},LK=g.mode==='lock',n=players[tg].name,my=players[uid].name,id=push(ref(db,`rooms/${code}/events`)).key,sec=Math.round((now()-g.seekStart)/1000);let u;
+ if(type==='free')u={['st/'+tg]:'F1',['imm/'+tg]:now()+FREE_IMM,['frees/'+uid]:(g.frees?.[uid]||0)+1,ev:{id,k:'free',t:tg,c:'#7cff6b',text:`🔑 ${my} freed ${n}! Run!`}};
+ else if(LK){const out=st[tg]==='F1';u={['st/'+tg]:out?'OUT':'L1',ev:{id,k:out?'out':'lock',t:tg,text:out?`❌ ${my} caught ${n} again — OUT!`:`🔒 ${my} locked ${n}!`}};if(out)u['captured/'+tg]=sec}
+ else u={['captured/'+tg]:sec,ev:{id,k:'cap',t:tg,text:`🔎 ${my} captured ${n}!`}};
+ update(ref(db,`rooms/${code}/game`),u).catch(()=>push(ref(db,`rooms/${code}/events`),{type:type==='free'?'free':'catch',by:uid,target:tg,t:now()})); // fallback if DB rules only allow host writes
+ checkEnd()}
+function checkEnd(){
+ if(status!=='playing'||game.phase!=='seek'||!ids().length)return;
+ const hid=ids().filter(i=>i!==game.seekerId),cap=game.captured||{},st=game.st||{},LK=game.mode==='lock',left=hid.filter(i=>cap[i]==null&&!(LK&&st[i]==='L1'));
+ if(!players[game.seekerId]||!hid.length)endRound('hiders');else if(!left.length)endRound('seeker')}
+function act(a,auto){
+ if(cur!=='game'||game.phase==='end'||game.captured?.[uid]!=null)return;const iAm=uid===game.seekerId,ph=game.phase,LK=game.mode==='lock',st=game.st||{};
+ if(a==='hide'&&!iAm&&LK){if(ph!=='seek'||st[uid]==='L1')return;let b=null,bd=1e9;
+  ids().forEach(i=>{if(i!==uid&&st[i]==='L1'&&game.captured?.[i]==null){const d=nearD(i);if(d<=K.key&&d<bd){bd=d;b=i}}});
+  if(!b){if(!auto)toast('Stand next to a locked friend','warn');return}return hit('free',b)}
+ if(a==='hide'&&!iAm){if(Date.now()-hideAt<200)return;
+  if(hidden)hidden=false;else{const z=zones.find(z=>dist(me,z)<=z.r);if(!z)return toast('Move onto a glowing hiding spot first','warn');hidden=true;me.x=z.x;me.y=z.y}
+  hideAt=Date.now();update(ref(db,`rooms/${code}/players/${uid}`),{hidden,x:Math.round(me.x),y:Math.round(me.y)});sfx('click')}
+ if(a==='scan'&&iAm&&ph==='seek'&&!LK){const cd=CD[settings.diff]||12;if(Date.now()-scanAt<cd*1000)return;scanAt=Date.now();sfx('scan');burst(me.x,me.y,'#00e5ff');
+  let n=0;ids().forEach(i=>{if(i!==uid&&players[i].hidden&&game.captured?.[i]==null&&dist(me,pos[i])<=170){reveal[i]=Date.now()+3000;n++}});toast(n?`Scan found ${n} hidden player${n>1?'s':''}!`:'Scan: nothing nearby','warn')}
+ if(a==='catch'&&iAm&&ph==='seek'){let best=null,bd=1e9;const t=now();
+  ids().forEach(i=>{if(i===uid||game.captured?.[i]!=null||(LK&&(st[i]==='L1'||(game.imm?.[i]||0)>t)))return;const d=nearD(i),r=players[i].hidden?((reveal[i]||0)>Date.now()?K.rev:K.hid):K.catch;if(d<=r&&d<bd){bd=d;best=i}});
+  if(!best){if(!auto)toast('Missed! Get closer','warn');return}hit('catch',best)}
+}
+
+// ===================== Score / Result =====================
+function renderSB(){const cap=game.captured||{},tot=game.totals||{},LK=game.mode==='lock',st=game.st||{};
+ $('sbt').innerHTML='<b>Player</b><b>Role</b><b>Caught</b><b>Survival</b><b>Total</b>'+ids().map(i=>{const sk=i===game.seekerId;return`<div>${esc(players[i].name)}</div><div>${sk?(LK?'Catcher':'Seeker'):(LK?'Runner':'Hider')}</div><div>${sk?Object.keys(cap).length:'—'}</div><div>${sk?'—':cap[i]!=null?cap[i]+'s':LK&&st[i]==='L1'?'🔒 locked':'alive'}</div><div>${tot[i]||0}</div>`}).join('')}
+function showResult(){
+ cancelAnimationFrame(raf);show('result');const w=game.winner,rs=game.rs||{},tot=game.totals||{},me_s=uid===game.seekerId;
+ $('rt').textContent=game.mode==='lock'?(w==='seeker'?'🔒 CATCHER WINS!':'🏃 RUNNERS WIN!'):(w==='seeker'?'🔎 SEEKER WINS!':'🏆 HIDERS WIN!');sfx((w==='seeker')===me_s?'win':'lose');
+ const rows=Object.entries(rs).sort((a,b)=>b[1].p-a[1].p);
+ $('rs').innerHTML='<b>Player</b><b>Role</b><b>Result</b><b>Round</b><b>Total</b>'+rows.map(([i,r],k)=>`<div>${k?'':'⭐ '}${esc(r.n)}</div><div>${r.r}</div><div>${r.v}</div><div>+${r.p}</div><div>${tot[i]||0}</div>`).join('')+(rows[0]?`<div style="grid-column:1/-1;text-align:center;color:#ffd24d">MVP: ${esc(rows[0][1].n)}</div>`:'');
+ $('rb').innerHTML=(isHost()?'<button class="btn" data-act="start">Play again</button><button class="btn alt" data-act="tolobby">Return to lobby</button>':'<small>Waiting for the host…</small>')+'<button class="ghost" data-act="leave">Leave room</button>'}
+
+// ===================== Input & Event Delegation =====================
+document.addEventListener('click',async e=>{
+ const c=e.target.closest('[data-ch]');if(c){const i=+c.dataset.ch;if(!(i>=0&&i<CH.length))return;sfx('click');
+  if(c.parentNode.id==='lcg'&&code)update(ref(db,`rooms/${code}/players/${uid}`),{ch:i});else{selCh=i;hlChars()}return}
+ const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;if(a!=='snd')sfx('click');
+ if(a==='go'){mode=b.dataset.v;$('tc').classList.toggle('on',mode==='create');$('tj').classList.toggle('on',mode==='join');$('jc').style.display=mode==='join'?'':'none';$('cs').style.display=mode==='create'?'':'none';$('go').textContent=mode==='create'?'Create room':'Join room';show('setup');hlChars()}
+ else if(a==='home')show('landing');
+ else if(a==='submit'){b.disabled=true;await submit();b.disabled=false}
+ else if(a==='copy'){navigator.clipboard?.writeText(code);toast('Code copied: '+code)}
+ else if(a==='share'){const d={title:'Hide & Seek',text:'Join my Hide & Seek room: '+code,url:location.href};navigator.share?navigator.share(d).catch(()=>{}):(navigator.clipboard?.writeText(d.text),toast('Invite copied'))}
+ else if(a==='ready')update(ref(db,`rooms/${code}/players/${uid}`),{ready:!players[uid]?.ready});
+ else if(a==='start')startRound();
+ else if(a==='tolobby'&&isHost()){await update(ref(db,`rooms/${code}`),{status:'lobby'})}
+ else if(a==='leave'){$('pm').hidden=true;leaveRoom()}
+ else if(a==='sb'){$('sbo').hidden=!$('sbo').hidden;$('sbo').classList.toggle('show',!$('sbo').hidden);renderSB()}
+ else if(a==='pause'){$('pm').hidden=!$('pm').hidden;$('pm').classList.toggle('show',!$('pm').hidden)}
+ else if(a==='snd'){snd=!snd;$('sndb').textContent=snd?'🔊':'🔇'}
+});
+document.addEventListener('change',e=>{const k=e.target.dataset?.k;if(k&&e.target.closest('#ls'))setSetting(k,['diff','mode'].includes(k)?e.target.value:+e.target.value)});
+document.addEventListener('keydown',e=>{if(/input|select/i.test(e.target.tagName))return;const k=e.key.toLowerCase();keys[k]=true;
+ if(k==='e')act('hide');if(k==='q')act('scan');if(k===' '){e.preventDefault();act('catch')}
+ if(k==='escape'&&cur==='game')document.querySelector('[data-act=pause]').click();if(k.startsWith('arrow'))e.preventDefault()});
+document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+window.addEventListener('blur',()=>keys={});
+document.querySelectorAll('[data-a]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();act(b.dataset.a)}));
+// Virtual joystick
+const jEl=$('joy'),kn=$('knob');let jp=null;
+function jm(e){const r=jEl.getBoundingClientRect();let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;const m=r.width/2,l=Math.hypot(x,y);if(l>m){x*=m/l;y*=m/l}joy.x=x/m;joy.y=y/m;kn.style.transform=`translate(${x}px,${y}px)`}
+jEl.addEventListener('pointerdown',e=>{jp=e.pointerId;jEl.setPointerCapture(jp);jm(e)});
+jEl.addEventListener('pointermove',e=>{if(e.pointerId===jp)jm(e)});
+['pointerup','pointercancel'].forEach(n=>jEl.addEventListener(n,e=>{if(e.pointerId===jp){jp=null;joy.x=joy.y=0;kn.style.transform=''}}));
+$('rcode').addEventListener('input',e=>e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''));
+
+// ===================== Boot =====================
+buildGrids();$('cs').innerHTML=sgHTML(S0,false);
+$('lrow').innerHTML=CH.slice(0,8).map((c,i)=>`<span class="lc" style="animation-delay:${i*.15}s">${chSvg(i,54)}</span>`).join('');
+new ResizeObserver(resize).observe($('bd'));addEventListener('resize',resize);resize();
+$('bd').addEventListener('wheel',e=>{e.preventDefault();zoom=Math.min(1.5,Math.max(.7,zoom+e.deltaY*.0008))},{passive:false});
+try{
+ if(!firebaseConfig.apiKey||firebaseConfig.apiKey.startsWith('YOUR_'))throw new Error('Add your Firebase config at the top of index.html');
+ const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getDatabase(app);
+ await setPersistence(auth,browserSessionPersistence); // each browser tab = its own player
+ await signInAnonymously(auth);uid=auth.currentUser.uid;
+}catch(e){toast(e.message,'err');document.querySelectorAll('[data-act=go]').forEach(b=>b.disabled=true)}
+</script></body></html>
