@@ -441,7 +441,7 @@ function onGame(v){const p=game,g=v||{};game=g;
  if(p.round===g.round&&p.phase==='hide'&&g.phase==='seek')toast(g.mode==='lock'?'🔒 The chase begins!':'🔎 The hunt begins!');
  sync();if(isHost())checkEnd()}
 function sync(){if(!code)return;
- if(status==='lobby'){doneRound=game.round||0;if(cur==='game'||cur==='result'){resetLocal();show('lobby');renderLobby()}return}
+ if(status==='lobby'){if(game.phase==='end')doneRound=game.round||0;if(cur==='game'||cur==='result'){resetLocal();show('lobby');renderLobby()}return}
  if(status==='playing'&&game.round){
   if(game.phase==='end'){if(cur!=='result'&&game.round!==doneRound){localRound=game.round;showResult()}}
   else if(game.round!==localRound)beginRound()}}
